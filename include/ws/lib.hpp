@@ -17,10 +17,13 @@ public:
     bool const& isDirected() const;
     int const& getValue() const;
     // I want to return a constant list that shouldnt be modified.
-    // std::list<int> const& getNeighbours() const;
-    // std::list<int> const& getChilds() const;
-    // void addNeighbour(int neighbour);
-    // void deleteNeighbour(int neighbour);
-    // void addChild(int neighbour);
-    // void deleteChild(int neighbour);
+    void setNeighbours(std::list<int>& neighbours);
+    std::list<int>& getNeighbours();
+    void setChilds(std::list<int>& childs);
+    std::list<int>& getChilds();
+
+    void addNeighbour(int neighbour);
+    void deleteNeighbour(int neighbour);
+    void addChild(int neighbour);
+    void deleteChild(int neighbour);
 };
