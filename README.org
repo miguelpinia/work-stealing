@@ -1,0 +1,9 @@
+* Compilation, testing and execution
+
+  #+begin_src bash
+    mkdir -p build
+    cmake -S . -B build
+    make -C build
+    make -C build test
+    make -C build check #detailed results from tests
+  #+end_src

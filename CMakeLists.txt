@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.18)
+
+project(workStealing VERSION 0.1)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+enable_testing()
+
+add_subdirectory(src)
+add_subdirectory(apps)
+add_subdirectory(tests)
