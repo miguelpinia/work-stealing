@@ -1,29 +1,20 @@
 #include <iostream>
 #include <list>
+#include <vector>
 #include "ws/lib.hpp"
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
-
 
 using ::testing::Return;
 
 class VertexTest : public ::testing::Test
 {
 protected:
-    VertexTest();
-    virtual ~VertexTest();
-    virtual void SetUp();
-    virtual void TearDown();
+    VertexTest() {}
+    ~VertexTest() {}
+    void SetUp() {}
+    void TearDown() {}
 };
-
-
-VertexTest::VertexTest() {};
-
-VertexTest::~VertexTest() {};
-
-void VertexTest::SetUp() {};
-
-void VertexTest::TearDown() {};
 
 TEST_F(VertexTest, testInitialValues)
 {
@@ -116,8 +107,141 @@ TEST_F(VertexTest, testDeleteChild)
     }
 }
 
+class EdgeTest : public ::testing::Test
+{
+protected:
+    EdgeTest() {}
+    ~EdgeTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(EdgeTest, testSrcAndDest)
+{
+    edge e(10, 12);
+    EXPECT_EQ(e.getSrc(), 10);
+    EXPECT_EQ(e.getDest(), 12);
+}
+
+class GraphTest : public ::testing::Test
+{
+protected:
+    GraphTest() {
+    }
+    ~GraphTest() {}
+    void SetUp() {
+        directed = false;
+        edges.push_back(edge(4,0));
+        edges.push_back(edge(0,1));
+        edges.push_back(edge(1,2));
+        edges.push_back(edge(2,3));
+        g = graph(edges, directed, 4, 5, GraphType::RANDOM);
+    }
+    void TearDown() {}
+    std::vector<edge> edges;
+    graph g;
+    bool  directed;
+};
 
 
+TEST_F(GraphTest, testAddEdgeDirected)
+{
+    g.setDirected(true);
+    g.addEdge(edge(3,4));
+    std::list<int> expected = {2, 4};
+    std::list<int> neighbours = g.getNeighbours(3);
+    EXPECT_THAT(expected, ::testing::ContainerEq(neighbours));
+}
+
+TEST_F(GraphTest, testAddEdgeUndirected)
+{
+    g.setDirected(false);
+    g.addEdge(edge(3, 4));
+    std::list<int> l0 = {0};
+    std::list<int> l1 = {4};
+    EXPECT_EQ(l0.front(), g.getNeighbours(4).front());
+    EXPECT_EQ(l1.front(), g.getNeighbours(0).front());
+}
+
+TEST_F(GraphTest, testAddEdges)
+{
+    std::vector<edge> newEdges;
+    graph g1(newEdges, true, 0, 5, GraphType::RANDOM);
+    g1.addEdges(edges);
+    std::list<int> l0 = {1};
+    std::list<int> l1 = {2};
+    std::list<int> l2 = {3};
+    std::list<int> l4 = {0};
+    EXPECT_EQ(l0.front(), g1.getNeighbours(0).front());
+    EXPECT_EQ(l1.front(), g1.getNeighbours(1).front());
+    EXPECT_EQ(l2.front(), g1.getNeighbours(2).front());
+    EXPECT_EQ(l4.front(), g1.getNeighbours(4).front());
+}
+
+TEST_F(GraphTest, testDeleteEdgeDirected)
+{
+    graph g1(edges, true, 0, 5, GraphType::RANDOM);
+    g1.deleteEdge(edge(0, 1));
+    std::list<int> expected = {2};
+    EXPECT_TRUE(g1.getNeighbours(0).empty());
+    EXPECT_THAT(expected, ::testing::ContainerEq(g1.getNeighbours(1)));
+}
+
+TEST_F(GraphTest, testDeleteEdgeUndirected)
+{
+    graph g1(edges, false, 0, 5, GraphType::RANDOM);
+    g1.deleteEdge(edge(0, 1));
+    EXPECT_EQ(1, int(g1.getNeighbours(0).size()));
+    EXPECT_EQ(1, int(g1.getNeighbours(1).size()));
+}
+
+TEST_F(GraphTest, testHasEdge)
+{
+    graph g1(edges, false, 0, 5, GraphType::RANDOM);
+    EXPECT_TRUE(g1.hasEdge(edge(0,1)));
+}
+
+TEST_F(GraphTest, testHasNeighbours)
+{
+    EXPECT_TRUE(g.getNeighbours(1).size() > 1);
+}
+
+TEST_F(GraphTest, testGetRoot)
+{
+    EXPECT_EQ(4, g.getRoot());
+}
+
+TEST_F(GraphTest, testGetSize)
+{
+    EXPECT_EQ(5, g.getNumberVertices());
+}
+
+
+TEST_F(GraphTest, testGetType)
+{
+    EXPECT_EQ(GraphType::RANDOM, g.getType());
+}
+
+TEST_F(GraphTest, testGetNumberOfEdges)
+{
+    graph g1(edges, false, 0, 5, GraphType::RANDOM);
+    EXPECT_EQ(8, g.getNumberEdges());
+}
+
+TEST_F(GraphTest, testGetChilds)
+{
+    std::vector<edge> emptyEdges;
+    graph g1(emptyEdges, true, 4, 5, GraphType::RANDOM);
+    g1.addEdges(edges);
+    std::list<int> l0 = {4};
+    std::list<int> l1 = {0};
+    std::list<int> l2 = {1};
+    std::list<int> l3 = {2};
+    EXPECT_THAT(l0, ::testing::ContainerEq(g1.getChilds(0)));
+    EXPECT_THAT(l1, ::testing::ContainerEq(g1.getChilds(1)));
+    EXPECT_THAT(l2, ::testing::ContainerEq(g1.getChilds(2)));
+    EXPECT_THAT(l3, ::testing::ContainerEq(g1.getChilds(3)));
+}
 
 int main(int argc, char** argv)
 {
