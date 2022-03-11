@@ -243,6 +243,37 @@ TEST_F(GraphTest, testGetChilds)
     EXPECT_THAT(l3, ::testing::ContainerEq(g1.getChilds(3)));
 }
 
+
+class TaskArrayTest : public ::testing::Test
+{
+protected:
+    TaskArrayTest() {}
+    ~TaskArrayTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(TaskArrayTest, testGetSize)
+{
+    taskArrayWithSize array(100);
+    EXPECT_EQ(100, array.getSize());
+}
+
+TEST_F(TaskArrayTest, testSet)
+{
+    taskArrayWithSize array(10);
+    array.set(0, 10101);
+    EXPECT_EQ(10101, array.get(0));
+}
+
+TEST_F(TaskArrayTest, testGet)
+{
+    taskArrayWithSize array(10);
+    EXPECT_EQ(-1, array.get(0));
+    array.set(0, 10101);
+    EXPECT_EQ(10101, array.get(0));
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

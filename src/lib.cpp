@@ -188,3 +188,28 @@ void graph::setDirected(bool directed)
 {
     this->directed = directed;
 }
+
+//////////////////////////
+// Task array with size //
+//////////////////////////
+
+taskArrayWithSize::taskArrayWithSize() {}
+taskArrayWithSize::taskArrayWithSize(int size) : size(size)
+{
+    array = std::vector<int>(size, -1);
+}
+
+int& taskArrayWithSize::getSize()
+{
+    return size;
+}
+
+int& taskArrayWithSize::get(int position)
+{
+    return array[position];
+}
+
+void taskArrayWithSize::set(int position, int value)
+{
+    array[position] = value;
+}

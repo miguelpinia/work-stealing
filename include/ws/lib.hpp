@@ -72,3 +72,16 @@ public:
     void setDirected(bool directed);
     bool isDirected();
 };
+
+class taskArrayWithSize
+{
+private:
+    int size;
+    std::vector<int> array;
+public:
+    taskArrayWithSize();
+    taskArrayWithSize(int size);
+    int& getSize();
+    int& get(int position);
+    void set(int position, int value);
+};
