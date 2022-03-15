@@ -213,3 +213,82 @@ void taskArrayWithSize::set(int position, int value)
 {
     array[position] = value;
 }
+
+//////////////////////////////////////////
+// Work stealing algorithms and classes //
+//////////////////////////////////////////
+
+wsncmult::wsncmult(int size, int numThreads) : tail(-1), size(size)
+{
+    Head = 0;
+    head = std::vector<int>(numThreads, 0);
+    tasks = std::vector<int>(size, BOTTOM);
+}
+
+bool wsncmult::isEmpty(int label)
+{
+    return Head.load() > tail;
+}
+
+bool wsncmult::put(int task, int label)
+{
+    (void)label;
+    tail++;
+    if (tail == (int)tasks.size() - 1) expand();
+    if (tail <= (int)tasks.size() - 3) {
+        tasks[tail + 1] = BOTTOM;
+        tasks[tail + 2] = BOTTOM;
+    }
+    tasks[tail] = task;
+    return true;
+}
+
+int wsncmult::take(int label)
+{
+    head[label] = std::max(head[label], Head.load());
+    if (head[label] <= tail) {
+        int x = tasks[head[label]];
+        head[label]++;
+        Head.store(head[label]);
+        return x;
+    }
+    return EMPTY;
+}
+
+int wsncmult::steal(int label)
+{
+    head[label] = std::max(head[label], Head.load());
+    if (head[label] <= tail) {
+        int x = tasks[head[label]];
+        if (x != BOTTOM) {
+            head[label]++;
+            Head.store(head[label]);
+            return x;
+        }
+    }
+    return EMPTY;
+}
+
+void wsncmult::expand()
+{}
+
+void wsncmult::put(int task)
+{
+    (void) task;
+    throw std::runtime_error( "put(task) is unsupported" );
+}
+
+int wsncmult::take()
+{
+    throw std::runtime_error("take() is unsupported");
+}
+
+int wsncmult::steal()
+{
+    throw std::runtime_error("steal() is unsupported");
+}
+
+bool wsncmult::isEmpty()
+{
+    throw std::runtime_error( "isEmpty() is unsupported" );
+}

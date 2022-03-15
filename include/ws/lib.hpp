@@ -22,10 +22,27 @@ static const int TOP = -3;
 ///////////
 
 
-enum class GraphType { TORUS_2D, TORUS_2D_60, TORUS_3D, TORUS_3D_40, RANDOM, KGRAPH };
+enum class GraphType {
+    TORUS_2D,
+    TORUS_2D_60,
+    TORUS_3D,
+    TORUS_3D_40,
+    RANDOM,
+    KGRAPH
+};
 
-enum class AlgorithmType { SIMPLE, CHASELEV, CILK, IDEMPOTENT_DEQUE, IDEMPOTENT_LIFO, IDEMPOTENT_FIFO, WS_NC_MULT_OPT, WS_NC_MULT_LA_OPT, B_WS_NC_MULT_OPT, B_WS_NC_MULT_LA_OPT };
-
+enum class AlgorithmType {
+    SIMPLE,  // No work-stealing algorithm
+    CHASELEV, // Chase-Lev work-stealing algorithm
+    CILK,  // Cilk THE work-stealing algorithm
+    IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
+    IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
+    IDEMPOTENT_FIFO,  // Idempotent work-stealing first-in first-out
+    WS_NC_MULT_OPT,   // Work-stealing with multiplicity optimized ("infinite array")
+    WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
+    B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
+    B_WS_NC_MULT_LA_OPT // Work-stealing bounded with multiplicity ("linked-lists")
+};
 
 ////////////////////////////
 // Graphs and graph utils //
@@ -119,14 +136,14 @@ public:
 class workStealingAlgorithm
 {
 public:
-    virtual bool isEmpty();
-    virtual bool isEmpty(int label);
-    virtual void put(int task);
-    virtual bool put(int task, int label);
-    virtual int take();
-    virtual int take(int label);
-    virtual int steal();
-    virtual int stealin(int label);
+    virtual bool isEmpty() {return false;}
+    virtual bool isEmpty(int label) {(void) label; return false;}
+    virtual void put(int task) {(void) task;}
+    virtual bool put(int task, int label) {(void) task; (void) label; return false;}
+    virtual int take() { return -1; }
+    virtual int take(int label) { (void) label; return -1;}
+    virtual int steal() { return -1;}
+    virtual int steal(int label) {(void) label; return -1;}
 };
 
 class wsncmult : public workStealingAlgorithm
@@ -142,6 +159,7 @@ public:
     bool put(int task, int label);
     int take(int label);
     int steal(int label);
+    bool isEmpty(int label);
     void expand();
     void put(int task);
     int take();

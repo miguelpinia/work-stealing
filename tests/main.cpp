@@ -274,6 +274,59 @@ TEST_F(TaskArrayTest, testGet)
     EXPECT_EQ(10101, array.get(0));
 }
 
+class wsncmultTest : public ::testing::Test
+{
+protected:
+    wsncmultTest() {}
+    ~wsncmultTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(wsncmultTest, testIsEmpty)
+{
+    wsncmult ws(10, 1);
+    EXPECT_EQ(true, ws.isEmpty(0));
+    wsncmult ws1(10, 2);
+    EXPECT_EQ(true, ws1.isEmpty(0));
+    ws1.put(10, 1);
+    EXPECT_EQ(false, ws1.isEmpty(0));
+    EXPECT_EQ(false, ws1.isEmpty(1));
+}
+
+TEST_F(wsncmultTest, testNotEmpty)
+{
+    wsncmult ws(10, 4);
+    ws.put(10, 3);
+    EXPECT_EQ(false, ws.isEmpty(3));
+}
+
+TEST_F(wsncmultTest, testFIFO_take)
+{
+    wsncmult ws(10, 1);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.take(0);
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(wsncmultTest, testFIFO_steal)
+{
+    wsncmult ws(10, 1);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.steal(0);
+        EXPECT_EQ(i, output);
+    }
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
