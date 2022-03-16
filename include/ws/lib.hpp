@@ -3,6 +3,7 @@
 #include <list>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 int suma(int a, int b);
 
@@ -138,7 +139,7 @@ class workStealingAlgorithm
 public:
     virtual bool isEmpty() {return false;}
     virtual bool isEmpty(int label) {(void) label; return false;}
-    virtual void put(int task) {(void) task;}
+    virtual bool put(int task) {(void) task; return false;}
     virtual bool put(int task, int label) {(void) task; (void) label; return false;}
     virtual int take() { return -1; }
     virtual int take(int label) { (void) label; return -1;}
@@ -161,8 +162,43 @@ public:
     int steal(int label);
     bool isEmpty(int label);
     void expand();
-    void put(int task);
+    bool put(int task);
     int take();
     int steal();
     bool isEmpty();
+};
+
+class chaselev : public workStealingAlgorithm
+{
+private:
+    std::atomic<int> H;
+    std::atomic<int> T;
+    std::atomic<int> tasksSize;
+    std::atomic<int> *tasks;
+public:
+    chaselev(int initialSize);
+    bool isEmpty();
+    bool put(int task);
+    int take();
+    int steal();
+    void expand();
+    int getSize();
+};
+
+class cilk : public workStealingAlgorithm
+{
+private:
+    std::atomic<int> H;
+    std::atomic<int> T;
+    std::atomic<int> tasksSize;
+    std::atomic<int> *tasks;
+    std::mutex mtx;
+public:
+    cilk(int initialSize);
+    bool isEmpty();
+    bool put(int task);
+    int take();
+    int steal();
+    void expand();
+    int getSize();
 };

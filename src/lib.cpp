@@ -227,6 +227,7 @@ wsncmult::wsncmult(int size, int numThreads) : tail(-1), size(size)
 
 bool wsncmult::isEmpty(int label)
 {
+    (void) label;
     return Head.load() > tail;
 }
 
@@ -272,7 +273,7 @@ int wsncmult::steal(int label)
 void wsncmult::expand()
 {}
 
-void wsncmult::put(int task)
+bool wsncmult::put(int task)
 {
     (void) task;
     throw std::runtime_error( "put(task) is unsupported" );
@@ -291,4 +292,189 @@ int wsncmult::steal()
 bool wsncmult::isEmpty()
 {
     throw std::runtime_error( "isEmpty() is unsupported" );
+}
+
+///////////////////////////////////////
+// Chase-Lev work-stealing algorithm //
+///////////////////////////////////////
+
+// We're following the description provided by Morrison and Afek from
+// the article "Fence-Free Work Stealing on Bounded TSO Processors" to
+// implement Chase-Lev work-stealing algorithm
+chaselev::chaselev(int initialSize)
+{
+    H = 0;
+    T = 0;
+    tasksSize = initialSize;
+    tasks = new std::atomic<int>[initialSize];
+    for (int i = 0; i < initialSize; i++) {
+        tasks[i] = 0;
+    }
+}
+
+bool chaselev::isEmpty()
+{
+    int tail = T.load();
+    int head = H.load();
+    return head >= tail;
+}
+
+void chaselev::expand()
+{
+    int newSize = 2 * tasksSize.load();
+    std::atomic<int> *newData = new std::atomic<int>[newSize];
+    for (int i = 0; i < tasksSize; i++) {
+        newData[i] = tasks[i].load();
+    }
+    for (int i = tasksSize; i < newSize; i++) {
+        newData[i] = 0;
+    }
+    tasks = newData;
+    tasksSize.store(newSize);
+}
+
+bool chaselev::put(int task)
+{
+    int tail = T.load();
+    if (tail >= tasksSize) {
+        expand();
+        put(task);
+    }
+    tasks[tail % tasksSize] = task;
+    T.store(tail + 1);
+    return true;
+}
+
+int chaselev::take()
+{
+    int tail = T.load() - 1;
+    T.store(tail);
+    // In C++, the language doesn't have support for StoreLoad
+    // fence. But using atomic thread fence with memory_order_seq_cst,
+    // it's possible that compiler add MFENCE fence.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    int h = H.load();
+    if (tail > h) {
+        return tasks[tail % tasksSize];
+    }
+    if (tail < h) {
+        T.store(h);
+        return EMPTY;
+    }
+    T.store(h + 1);
+    if (!H.compare_exchange_strong(h, h + 1)){
+        return EMPTY;
+    } else {
+        return tasks[tail % tasksSize];
+    }
+}
+
+int chaselev::steal()
+{
+    while(true) {
+        int h = H.load();
+        int t = T.load();
+        if (h >= t) {
+            return EMPTY;
+        }
+        int task = tasks[h % tasksSize];
+        if (!H.compare_exchange_strong(h, h + 1)) continue;
+        return task;
+    }
+}
+
+int chaselev::getSize()
+{
+    return tasksSize;
+}
+
+//////////////////////////////////
+// Cilk work-stealing algorithm //
+//////////////////////////////////
+
+cilk::cilk(int initialSize)
+{
+    H = 0;
+    T = 0;
+    tasksSize = initialSize;
+    tasks = new std::atomic<int>[initialSize];
+    for (int i = 0; i < initialSize; i++) {
+        tasks[i] = 0;
+    }
+}
+
+bool cilk::isEmpty()
+{
+    int tail = T.load();
+    int head = H.load();
+    return head >= tail;
+}
+
+void cilk::expand()
+{
+    int newSize = 2 * tasksSize.load();
+    std::atomic<int> *newData = new std::atomic<int>[newSize];
+    for (int i = 0; i < tasksSize; i++) {
+        newData[i] = tasks[i].load();
+    }
+    for (int i = tasksSize; i < newSize; i++) {
+        newData[i] = 0;
+    }
+    tasks = newData;
+    tasksSize.store(newSize);
+}
+
+int cilk::getSize()
+{
+    return tasksSize;
+}
+
+bool cilk::put(int task)
+{
+    int tail = T.load();
+    if (tail >= tasksSize) {
+        expand();
+        put(task);
+    }
+    tasks[tail % tasksSize] = task;
+    T.store(tail + 1);
+    return true;
+}
+
+int cilk::take()
+{
+    int tail = T.load() - 1;
+    T.store(tail);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    int head = H.load();
+    if (tail >= head) {
+        return tasks[tail % tasksSize];
+    }
+    if (tail < head) {
+        mtx.lock();
+        if (H.load() >= (tail + 1)) {
+            T.store(tail + 1);
+            mtx.unlock();
+            return EMPTY;
+        }
+        mtx.unlock();
+    }
+    return tasks[tail % tasksSize];
+}
+
+int cilk::steal()
+{
+    mtx.lock();
+    int h = H.load();
+    H.store(h + 1);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    int ret;
+    if ((h + 1) <= T.load()) {
+        ret = tasks[h % tasksSize];
+    } else {
+        H.store(h);
+        ret = EMPTY;
+    }
+    mtx.unlock();
+    return ret;
 }

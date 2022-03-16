@@ -327,6 +327,115 @@ TEST_F(wsncmultTest, testFIFO_steal)
     }
 }
 
+class chaselevTest : public ::testing::Test
+{
+protected:
+    chaselevTest() {}
+    ~chaselevTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(chaselevTest, testIsEmpty)
+{
+    chaselev ws(10);
+    EXPECT_EQ(true, ws.isEmpty());
+    chaselev ws1(10);
+    EXPECT_EQ(true, ws1.isEmpty());
+    ws1.put(10);
+    EXPECT_EQ(false, ws1.isEmpty());
+}
+
+TEST_F(chaselevTest, testNotEmpty)
+{
+    chaselev ws(10);
+    ws.put(10);
+    EXPECT_EQ(false, ws.isEmpty());
+}
+
+TEST_F(chaselevTest, test_take)
+{
+    chaselev ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 9; i >= 0; i--) {
+        int output = ws.take();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(chaselevTest, test_steal)
+{
+    chaselev ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.steal();
+        EXPECT_EQ(i, output);
+    }
+}
+
+///////////////////////////////////////////////////
+// Test for the cilk THE work-stealing algorithm //
+///////////////////////////////////////////////////
+
+
+class cilkTest : public ::testing::Test
+{
+protected:
+    cilkTest() {}
+    ~cilkTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(cilkTest, testIsEmpty)
+{
+    cilk ws(10);
+    EXPECT_EQ(true, ws.isEmpty());
+    cilk ws1(10);
+    EXPECT_EQ(true, ws1.isEmpty());
+    ws1.put(10);
+    EXPECT_EQ(false, ws1.isEmpty());
+}
+
+TEST_F(cilkTest, testNotEmpty)
+{
+    cilk ws(10);
+    ws.put(10);
+    EXPECT_EQ(false, ws.isEmpty());
+}
+
+TEST_F(cilkTest, test_take)
+{
+    cilk ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 9; i >= 0; i--) {
+        int output = ws.take();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(cilkTest, test_steal)
+{
+    cilk ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.steal();
+        EXPECT_EQ(i, output);
+    }
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
