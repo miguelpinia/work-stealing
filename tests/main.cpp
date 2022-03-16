@@ -327,6 +327,10 @@ TEST_F(wsncmultTest, testFIFO_steal)
     }
 }
 
+////////////////////////////////////////////////////
+// Test for the Chase-Lev work-stealing algorithm //
+////////////////////////////////////////////////////
+
 class chaselevTest : public ::testing::Test
 {
 protected:
@@ -377,6 +381,17 @@ TEST_F(chaselevTest, test_steal)
         int output = ws.steal();
         EXPECT_EQ(i, output);
     }
+}
+
+TEST_F(chaselevTest, test_resize)
+{
+    chaselev ws(10);
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(10, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(20, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(40, ws.getSize());
 }
 
 ///////////////////////////////////////////////////
@@ -434,6 +449,17 @@ TEST_F(cilkTest, test_steal)
         int output = ws.steal();
         EXPECT_EQ(i, output);
     }
+}
+
+TEST_F(cilkTest, test_resize)
+{
+    cilk ws(10);
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(10, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(20, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(40, ws.getSize());
 }
 
 int main(int argc, char** argv)

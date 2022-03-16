@@ -273,27 +273,6 @@ int wsncmult::steal(int label)
 void wsncmult::expand()
 {}
 
-bool wsncmult::put(int task)
-{
-    (void) task;
-    throw std::runtime_error( "put(task) is unsupported" );
-}
-
-int wsncmult::take()
-{
-    throw std::runtime_error("take() is unsupported");
-}
-
-int wsncmult::steal()
-{
-    throw std::runtime_error("steal() is unsupported");
-}
-
-bool wsncmult::isEmpty()
-{
-    throw std::runtime_error( "isEmpty() is unsupported" );
-}
-
 ///////////////////////////////////////
 // Chase-Lev work-stealing algorithm //
 ///////////////////////////////////////
@@ -351,7 +330,7 @@ int chaselev::take()
     T.store(tail);
     // In C++, the language doesn't have support for StoreLoad
     // fence. But using atomic thread fence with memory_order_seq_cst,
-    // it's possible that compiler add MFENCE fence.
+    // it's possible that compiler would add MFENCE fence.
     std::atomic_thread_fence(std::memory_order_seq_cst);
     int h = H.load();
     if (tail > h) {

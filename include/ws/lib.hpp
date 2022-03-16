@@ -162,10 +162,6 @@ public:
     int steal(int label);
     bool isEmpty(int label);
     void expand();
-    bool put(int task);
-    int take();
-    int steal();
-    bool isEmpty();
 };
 
 class chaselev : public workStealingAlgorithm
