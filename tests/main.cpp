@@ -462,6 +462,135 @@ TEST_F(cilkTest, test_resize)
     EXPECT_EQ(40, ws.getSize());
 }
 
+///////////////////////////////////////////////////////////
+// Test for the idempotent FIFO work-stealing algorithms //
+///////////////////////////////////////////////////////////
+
+class taskArrayWithSizeTest : public ::testing::Test
+{
+protected:
+    taskArrayWithSizeTest() {}
+    ~taskArrayWithSizeTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(taskArrayWithSizeTest, wellFormed)
+{
+    taskArrayWithSize a(10);
+    EXPECT_EQ(10, a.getSize());
+    taskArrayWithSize b(20, -2);
+    EXPECT_EQ(20, b.getSize());
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(-2, b.get(i));
+        b.set(i, i);
+    }
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(i, b.get(i));
+    }
+
+}
+
+TEST_F(taskArrayWithSizeTest, wellFormed2)
+{
+    taskArrayWithSize b(20, -2);
+    EXPECT_EQ(20, b.getSize());
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(-2, b.get(i));
+        b.set(i, i);
+    }
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(i, b.get(i));
+    }
+    taskArrayWithSize c = b;
+    EXPECT_EQ(20, c.getSize());
+}
+
+TEST_F(taskArrayWithSizeTest, wellFormed3)
+{
+    taskArrayWithSize b(20, -2);
+    EXPECT_EQ(20, b.getSize());
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(-2, b.get(i));
+        b.set(i, i);
+    }
+    for (int i = 0; i < b.getSize(); i++) {
+        EXPECT_EQ(i, b.get(i));
+    }
+    taskArrayWithSize c = b;
+    EXPECT_EQ(20, c.getSize());
+    for (int i = 0; i < b.getSize(); i++) {
+        b.set(i, -2 * i);
+    }
+    for (int i = 0; i < c.getSize(); i++) {
+        EXPECT_EQ(i, c.get(i));
+    }
+    // EXPECT_EQ(&b, &c);
+}
+
+class idempotentFIFOTest : public ::testing::Test
+{
+protected:
+    idempotentFIFOTest() {}
+    ~idempotentFIFOTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(idempotentFIFOTest, testIsEmpty)
+{
+    idempotentFIFO ws(10);
+    EXPECT_EQ(true, ws.isEmpty());
+    idempotentFIFO ws1(10);
+    EXPECT_EQ(true, ws1.isEmpty());
+    ws1.put(10);
+    EXPECT_EQ(false, ws1.isEmpty());
+}
+
+TEST_F(idempotentFIFOTest, testNotEmpty)
+{
+    idempotentFIFO ws(10);
+    ws.put(10);
+    EXPECT_EQ(false, ws.isEmpty());
+}
+
+TEST_F(idempotentFIFOTest, test_take)
+{
+    idempotentFIFO ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.take();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentFIFOTest, test_steal)
+{
+    idempotentFIFO ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 10; i++) {
+        int output = ws.steal();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentFIFOTest, test_resize)
+{
+    idempotentFIFO ws(10);
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(10, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(20, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(40, ws.getSize());
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

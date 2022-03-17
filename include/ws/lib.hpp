@@ -129,6 +129,7 @@ private:
 public:
     taskArrayWithSize();
     taskArrayWithSize(int size);
+    taskArrayWithSize(int size, int defaultValue);
     int& getSize();
     int& get(int position);
     void set(int position, int value);
@@ -191,6 +192,22 @@ private:
     std::mutex mtx;
 public:
     cilk(int initialSize);
+    bool isEmpty();
+    bool put(int task);
+    int take();
+    int steal();
+    void expand();
+    int getSize();
+};
+
+class idempotentFIFO : public workStealingAlgorithm
+{
+private:
+    std::atomic<int> head;
+    std::atomic<int> tail;
+    taskArrayWithSize tasks;
+public:
+    idempotentFIFO(int size);
     bool isEmpty();
     bool put(int task);
     int take();

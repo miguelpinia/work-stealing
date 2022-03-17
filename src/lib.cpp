@@ -199,6 +199,11 @@ taskArrayWithSize::taskArrayWithSize(int size) : size(size)
     array = std::vector<int>(size, -1);
 }
 
+taskArrayWithSize::taskArrayWithSize(int size, int defaultValue) : size(size)
+{
+    array = std::vector<int>(size, defaultValue);
+}
+
 int& taskArrayWithSize::getSize()
 {
     return size;
@@ -456,4 +461,82 @@ int cilk::steal()
     }
     mtx.unlock();
     return ret;
+}
+
+/////////////////////////////////////////////
+// Idempotent FIFO Work-stealing algorithm //
+/////////////////////////////////////////////
+
+idempotentFIFO::idempotentFIFO(int size)
+{
+    head = 0;
+    tail = 0;
+    tasks = taskArrayWithSize(size);
+}
+
+bool idempotentFIFO::isEmpty()
+{
+    int h = head.load();
+    int t = tail.load();
+    return h == t;
+}
+
+bool idempotentFIFO::put(int task)
+{
+    int h = head.load();
+    int t = tail.load();
+    if (t == (h + tasks.getSize())) {
+        expand();
+        put(task);
+    }
+    tasks.set(t % tasks.getSize(), task);
+    std::atomic_thread_fence(std::memory_order_release);
+    tail.store(t + 1);
+    return true;
+}
+
+int idempotentFIFO::take()
+{
+    int h = head.load();
+    int t = tail.load();
+    if (h == t) return EMPTY;
+    int task = tasks.get(h % tasks.getSize());
+    head.store(h + 1);
+    return task;
+}
+
+int idempotentFIFO::steal()
+{
+    while(true) {
+        int h = head.load();
+        std::atomic_thread_fence(std::memory_order_acquire);
+        int t = tail.load();
+        if (h == t) return EMPTY;
+        std::atomic_thread_fence(std::memory_order_acquire);
+        taskArrayWithSize* a = &tasks;
+        int task = a->get(h % a->getSize());
+        std::atomic_thread_fence(std::memory_order_acquire);
+        if (head.compare_exchange_strong(h, h + 1)) {
+            return task;
+        }
+    }
+}
+
+void idempotentFIFO::expand()
+{
+    int size = tasks.getSize();
+    taskArrayWithSize a(2 * size);
+    std::atomic_thread_fence(std::memory_order_release);
+    int h = head.load();
+    int t = tail.load();
+    for (int i = h; i < t; i++) {
+        a.set(i % a.getSize(), tasks.get(i % tasks.getSize()));
+    }
+    tasks = a;
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+}
+
+int idempotentFIFO::getSize()
+{
+    return tasks.getSize();
 }
