@@ -392,6 +392,8 @@ TEST_F(chaselevTest, test_resize)
     EXPECT_EQ(20, ws.getSize());
     for (int i = 0; i < 10; i++) ws.put(i);
     EXPECT_EQ(40, ws.getSize());
+    for(int i = 0; i < 50; i++) ws.put(i);
+    EXPECT_EQ(80, ws.getSize());
 }
 
 ///////////////////////////////////////////////////
@@ -460,6 +462,8 @@ TEST_F(cilkTest, test_resize)
     EXPECT_EQ(20, ws.getSize());
     for (int i = 0; i < 10; i++) ws.put(i);
     EXPECT_EQ(40, ws.getSize());
+    for(int i = 0; i < 50; i++) ws.put(i);
+    EXPECT_EQ(80, ws.getSize());
 }
 
 ///////////////////////////////////////////////////////////

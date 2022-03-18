@@ -314,7 +314,9 @@ void chaselev::expand()
     for (int i = tasksSize; i < newSize; i++) {
         newData[i] = 0;
     }
+    std::atomic<int>* tmp = tasks;
     tasks = newData;
+    delete[] tmp;
     tasksSize.store(newSize);
 }
 
@@ -405,7 +407,9 @@ void cilk::expand()
     for (int i = tasksSize; i < newSize; i++) {
         newData[i] = 0;
     }
+    std::atomic<int>* tmp = tasks;
     tasks = newData;
+    delete[] tmp;
     tasksSize.store(newSize);
 }
 
@@ -566,7 +570,8 @@ bool idempotentLIFO::isEmpty()
 
 bool idempotentLIFO::put(int task)
 {
-    auto [t, g] = *anchor.load();
+    auto oldReference = anchor.load();
+    auto [t, g] = *oldReference;
     if (t == capacity) {
         expand();
         return put(task);
@@ -575,16 +580,19 @@ bool idempotentLIFO::put(int task)
     std::atomic_thread_fence(std::memory_order_release);
     pair* newPair = new pair(t + 1, g + 1);
     anchor.store(newPair);
+    delete oldReference;
     return true;
 }
 
 int idempotentLIFO::take()
 {
-    auto [t, g] = *anchor.load();
+    auto oldReference = anchor.load();
+    auto [t, g] = *oldReference;
     if (t == 0) return EMPTY;
     int task = tasks[t - 1];
     pair* newPair = new pair(t - 1, g);
     anchor.store(newPair);
+    delete oldReference;
     return task;
 }
 
@@ -598,7 +606,10 @@ int idempotentLIFO::steal()
         std::atomic_thread_fence(std::memory_order_release);
         int task = tmp[t - 1];
         pair* newPair = new pair(t - 1, g);
-        if (anchor.compare_exchange_strong(oldReference, newPair)) return task;
+        if (anchor.compare_exchange_strong(oldReference, newPair)) {
+            delete oldReference;
+            return task;
+        }
     }
 }
 
