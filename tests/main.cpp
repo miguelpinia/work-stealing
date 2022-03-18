@@ -591,6 +591,133 @@ TEST_F(idempotentFIFOTest, test_resize)
     EXPECT_EQ(40, ws.getSize());
 }
 
+class idempotentLIFOTest : public ::testing::Test
+{
+protected:
+    idempotentLIFOTest() {}
+    ~idempotentLIFOTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(idempotentLIFOTest, testIsEmpty)
+{
+    idempotentLIFO ws(10);
+    EXPECT_EQ(true, ws.isEmpty());
+    idempotentLIFO ws1(10);
+    EXPECT_EQ(true, ws1.isEmpty());
+    ws1.put(10);
+    EXPECT_EQ(false, ws1.isEmpty());
+}
+
+TEST_F(idempotentLIFOTest, testNotEmpty)
+{
+    idempotentLIFO ws(10);
+    ws.put(10);
+    EXPECT_EQ(false, ws.isEmpty());
+}
+
+TEST_F(idempotentLIFOTest, test_take)
+{
+    idempotentLIFO ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 9; i >= 0; i--) {
+        int output = ws.take();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentLIFOTest, test_steal)
+{
+    idempotentLIFO ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i >= 9; i--) {
+        int output = ws.steal();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentLIFOTest, test_resize)
+{
+    idempotentLIFO ws(10);
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(10, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(20, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(40, ws.getSize());
+}
+
+class idempotentDequeTest : public ::testing::Test
+{
+protected:
+    idempotentDequeTest() {}
+    ~idempotentDequeTest() {}
+    void SetUp() {}
+    void TearDown() {}
+};
+
+TEST_F(idempotentDequeTest, testIsEmpty)
+{
+    idempotentDeque ws(10);
+    EXPECT_EQ(true, ws.isEmpty());
+    idempotentDeque ws1(10);
+    EXPECT_EQ(true, ws1.isEmpty());
+    ws1.put(10);
+    EXPECT_EQ(false, ws1.isEmpty());
+}
+
+TEST_F(idempotentDequeTest, testNotEmpty)
+{
+    idempotentDeque ws(10);
+    ws.put(10);
+    ws.put(11);
+    EXPECT_EQ(false, ws.isEmpty());
+}
+
+TEST_F(idempotentDequeTest, test_take)
+{
+    idempotentDeque ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 9; i >= 0; i--) {
+        int output = ws.take();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentDequeTest, test_steal)
+{
+    idempotentDeque ws(10);
+    for (int i = 0; i < 10; i++) {
+        bool inserted = ws.put(i);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i >= 9; i--) {
+        int output = ws.steal();
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(idempotentDequeTest, test_resize)
+{
+    idempotentDeque ws(10);
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(10, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(20, ws.getSize());
+    for (int i = 0; i < 10; i++) ws.put(i);
+    EXPECT_EQ(40, ws.getSize());
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

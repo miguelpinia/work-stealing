@@ -215,3 +215,50 @@ public:
     void expand();
     int getSize();
 };
+
+
+struct pair
+{
+    int t;
+    int g;
+};
+
+class idempotentLIFO : public workStealingAlgorithm
+{
+private:
+    int* tasks;
+    int capacity;
+    std::atomic<pair> anchor;
+public:
+    idempotentLIFO(int size);
+    bool isEmpty();
+    bool put(int task);
+    int take();
+    int steal();
+    void expand();
+    int getSize();
+};
+
+struct triplet
+{
+    int head;
+    int size;
+    int tag;
+    triplet(int, int, int);
+};
+
+class idempotentDeque : public workStealingAlgorithm
+{
+private:
+    int capacity;
+    taskArrayWithSize tasks;
+    std::atomic<triplet*> anchor;
+public:
+    idempotentDeque(int size);
+    bool isEmpty();
+    bool put(int task);
+    int take();
+    int steal();
+    void expand();
+    int getSize();
+};
