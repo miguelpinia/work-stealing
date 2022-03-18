@@ -7,3 +7,37 @@
     make -C build test
     make -C build check #detailed results from tests
   #+end_src
+
+** Roadmap
+
+   - [X] Implementation of custom graph
+   - [X] Implementation of custom array with size
+   - [X] Implementation of Chase-Lev work-stealing algorithm
+   - [X] Implementation of Cilk THE work-stealing algorithm
+   - [X] Implementation of Idempotent FIFO work-stealing algorithm
+   - [X] Implementation of Idempotent LIFO work-stealing algorithm
+   - [X] Implementation of Idempotent DEQUE work-stealing algorithm
+   - [ ] Implementation of Work-stealing with multiplicity algorithm (based on
+     larger arrays).
+   - [ ] Implementation of work-stealing with multiplicity algorithm (based on
+     lists of arrays).
+   - [ ] Implementation of bounded work-stealing with multiplicity algorithm
+     (based on larger arrays).
+   - [ ] Implementation of bounded work-stealing with multiplicity algorithm
+     (based on lists of arrays).
+   - [ ] Implementation of zero cost experiments
+   - [ ] Implementation of experiments on graphs
+
+
+
+** Another things to do
+
+   - [ ] Code factorization to provide more modularity
+   - [ ] Remove memory leaks
+   - [ ] Write notes about the following topics
+     - Test-driven development
+     - Memory model in c++. As well, describe atomic and mutex operations
+       avalaibles in c++20.
+     - Memory fences in detail.
+     - Applications of work-stealing.
+     - Applications of queues.
