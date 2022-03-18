@@ -488,7 +488,7 @@ bool idempotentFIFO::put(int task)
     int t = tail.load();
     if (t == (h + tasks.getSize())) {
         expand();
-        put(task);
+        return put(task);
     }
     tasks.set(t % tasks.getSize(), task);
     std::atomic_thread_fence(std::memory_order_release);
@@ -568,7 +568,7 @@ bool idempotentLIFO::put(int task)
     auto [t, g] = anchor.load();
     if (t == capacity) {
         expand();
-        put(task);
+        return put(task);
     }
     tasks[t] = task;
     std::atomic_thread_fence(std::memory_order_release);
@@ -642,9 +642,8 @@ bool idempotentDeque::put(int task)
     triplet* old = anchor.load();
     auto[head, size, tag] = *old;
     if (size == tasks.getSize()) {
-        std::cout << size << std::endl;
         expand();
-        put(task);
+        return put(task);
     }
     tasks.set((head + size) % tasks.getSize(), task);
     std::atomic_thread_fence(std::memory_order_release);
@@ -689,16 +688,12 @@ void idempotentDeque::expand()
 {
     triplet* old = anchor.load();
     auto [head, size, tag] = *old;
-    std::cout << tasks.getSize() << std::endl;
     taskArrayWithSize a(2 * tasks.getSize());
-    std::cout << a.getSize() << std::endl;
     for (int i = 0; i < size; i++) {
         a.set((head + 1) % a.getSize(), tasks.get((head + 1) % tasks.getSize()));
     }
     std::atomic_thread_fence(std::memory_order_release);
-    std::cout << &tasks << std::endl;
     tasks = a;
-    std::cout << &tasks << ", " << tasks.getSize() << std::endl;
     std::atomic_thread_fence(std::memory_order_release);
 
 }
