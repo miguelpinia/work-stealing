@@ -221,6 +221,7 @@ struct pair
 {
     int t;
     int g;
+    pair(int t, int g) : t(t), g(g) {};
 };
 
 class idempotentLIFO : public workStealingAlgorithm
@@ -228,7 +229,7 @@ class idempotentLIFO : public workStealingAlgorithm
 private:
     int* tasks;
     int capacity;
-    std::atomic<pair> anchor;
+    std::atomic<pair*> anchor;
 public:
     idempotentLIFO(int size);
     bool isEmpty();

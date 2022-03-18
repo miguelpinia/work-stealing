@@ -555,46 +555,50 @@ idempotentLIFO::idempotentLIFO(int size)
 {
     tasks = new int[size];
     capacity = size;
-    anchor.store(pair{0, 0});
+    pair* p = new pair(0, 0);
+    anchor.store(p);
 }
 
 bool idempotentLIFO::isEmpty()
 {
-    return anchor.load().g == 0;
+    return anchor.load()->g == 0;
 }
 
 bool idempotentLIFO::put(int task)
 {
-    auto [t, g] = anchor.load();
+    auto [t, g] = *anchor.load();
     if (t == capacity) {
         expand();
         return put(task);
     }
     tasks[t] = task;
     std::atomic_thread_fence(std::memory_order_release);
-    anchor.store(pair(t + 1, g + 1));
+    pair* newPair = new pair(t + 1, g + 1);
+    anchor.store(newPair);
     return true;
 }
 
 int idempotentLIFO::take()
 {
-    auto [t, g] = anchor.load();
+    auto [t, g] = *anchor.load();
     if (t == 0) return EMPTY;
     int task = tasks[t - 1];
-    anchor.store(pair(t - 1, g));
+    pair* newPair = new pair(t - 1, g);
+    anchor.store(newPair);
     return task;
 }
 
 int idempotentLIFO::steal()
 {
     while (true) {
-        pair oldReference = anchor.load();
-        auto [t, g] = oldReference;
+        pair* oldReference = anchor.load();
+        auto [t, g] = *oldReference;
         if (t == 0) return EMPTY;
         int* tmp = tasks;
         std::atomic_thread_fence(std::memory_order_release);
         int task = tmp[t - 1];
-        if (anchor.compare_exchange_strong(oldReference, pair{t - 1, g})) return task;
+        pair* newPair = new pair(t - 1, g);
+        if (anchor.compare_exchange_strong(oldReference, newPair)) return task;
     }
 }
 
@@ -695,7 +699,6 @@ void idempotentDeque::expand()
     std::atomic_thread_fence(std::memory_order_release);
     tasks = a;
     std::atomic_thread_fence(std::memory_order_release);
-
 }
 
 int idempotentDeque::getSize()

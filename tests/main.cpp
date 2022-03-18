@@ -701,7 +701,7 @@ TEST_F(idempotentDequeTest, test_steal)
         bool inserted = ws.put(i);
         EXPECT_TRUE(inserted);
     }
-    for (int i = 0; i >= 9; i--) {
+    for (int i = 0; i < 10; i++) {
         int output = ws.steal();
         EXPECT_EQ(i, output);
     }
