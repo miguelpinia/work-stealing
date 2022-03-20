@@ -1,4 +1,21 @@
-* Compilation, testing and execution
+* Work-stealing algorithms
+
+  Algorithms implemented
+
+  - Chase-Lev work-stealing algorithm (following the specification as described
+    in the article "Fence-Free Work Stealing on Bounded TSO Processors" of
+    Morrison and Afek).
+  - Cilk THE work-stealing algorithm (following the specification as described
+    in the article "Fence-Free Work Stealing on Bounded TSO Processors" of
+    Morrison and Afek).
+  - Idempotent FIFO
+  - Idempotent LIFO
+  - Idempotent DEQUE
+  - Work-Stealing with Multiplicity
+  - Bounded work-stealing with multiplicity
+
+
+** Compilation, testing and execution
 
   #+begin_src bash
     mkdir -p build
