@@ -1,3 +1,5 @@
+[[https://github.com/miguelpinia/work-stealing/actions/workflows/cmake.yml/badge.svg][file:https://github.com/miguelpinia/work-stealing/actions/workflows/cmake.yml/badge.svg]]
+
 * Work-stealing algorithms
 
   Algorithms implemented
