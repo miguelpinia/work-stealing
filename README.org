@@ -56,7 +56,7 @@
    - [ ] Write notes about the following topics
      - Test-driven development
      - Memory model in c++. As well, describe atomic and mutex operations
-       avalaibles in c++20.
+       available in c++20.
      - Memory fences in detail.
      - Applications of work-stealing.
      - Applications of queues.

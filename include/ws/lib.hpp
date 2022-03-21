@@ -50,45 +50,55 @@ enum class AlgorithmType {
 ////////////////////////////
 
 
-class vertex
-{
+class vertex {
 private:
     bool directed;
     int value;
-    std::list<int> neighbours;
-    std::list<int> childs;
+    std::list<int> neighbours_;
+    std::list<int> children_;
 public:
     vertex();
+
     vertex(bool directed, int value);
-    bool const& isDirected() const;
-    int const& getValue() const;
-    // I want to return a constant list that shouldnt be modified.
-    void setNeighbours(std::list<int>& neighbours);
-    std::list<int>& getNeighbours();
-    void setChilds(std::list<int>& childs);
-    std::list<int>& getChilds();
+
+    bool isDirected() const;
+
+    int getValue() const;
+
+    // I want to return a constant list that shouldn't be modified.
+    void setNeighbours(std::list<int> &neighbours);
+
+    std::list<int> &getNeighbours();
+
+    void setChildren(std::list<int> &children);
+
+    std::list<int> &getChildren();
 
     void addNeighbour(int neighbour);
+
     void deleteNeighbour(int neighbour);
+
     void addChild(int neighbour);
+
     void deleteChild(int neighbour);
 };
 
-class edge
-{
+class edge {
 private:
     int src;
     int dest;
 public:
     edge();
+
     edge(int src, int dest);
-    int getSrc();
-    int getDest();
+
+    int getSrc() const;
+
+    int getDest() const;
 };
 
 
-class graph
-{
+class graph {
 private:
     std::vector<vertex> vertices;
     bool directed;
@@ -98,21 +108,35 @@ private:
     GraphType type;
 public:
     graph();
+
     graph(std::vector<edge> edges, bool directed, int root, int numVertices, GraphType type);
-    graph(bool directed, int root, int numVertices, GraphType type);
-    ~graph();
+
+    //graph(bool directed, int root, int numVertices, GraphType type);
+
     void addEdge(int src, int dest);
+
     void addEdge(edge edge);
+
     void addEdges(std::vector<edge> edges);
+
     void deleteEdge(edge edge);
+
     bool hasEdge(edge edge);
-    std::list<int>& getNeighbours(int vertex);
-    std::list<int>& getChilds(int vertex);
-    int getRoot();
-    int getNumberVertices();
-    int getNumberEdges();
+
+    std::list<int> &getNeighbours(int vertex);
+
+    std::list<int> &getChildren(int vertex);
+
+    int getRoot() const;
+
+    int getNumberVertices() const;
+
+    int getNumberEdges() const;
+
     GraphType getType();
+
     void setDirected(bool directed);
+
     bool isDirected();
 };
 
@@ -121,35 +145,60 @@ public:
 // Work-stealing algorithms //
 //////////////////////////////
 
-class taskArrayWithSize
-{
+class taskArrayWithSize {
 private:
     int size;
     std::vector<int> array;
 public:
     taskArrayWithSize();
-    taskArrayWithSize(int size);
+
+    explicit taskArrayWithSize(int size);
+
     taskArrayWithSize(int size, int defaultValue);
-    int& getSize();
-    int& get(int position);
+
+    int &getSize();
+
+    int &get(int position);
+
     void set(int position, int value);
 };
 
-class workStealingAlgorithm
-{
+class workStealingAlgorithm {
 public:
-    virtual bool isEmpty() {return false;}
-    virtual bool isEmpty(int label) {(void) label; return false;}
-    virtual bool put(int task) {(void) task; return false;}
-    virtual bool put(int task, int label) {(void) task; (void) label; return false;}
+    virtual bool isEmpty() { return false; }
+
+    virtual bool isEmpty(int label) {
+        (void) label;
+        return false;
+    }
+
+    virtual bool put(int task) {
+        (void) task;
+        return false;
+    }
+
+    virtual bool put(int task, int label) {
+        (void) task;
+        (void) label;
+        return false;
+    }
+
     virtual int take() { return -1; }
-    virtual int take(int label) { (void) label; return -1;}
-    virtual int steal() { return -1;}
-    virtual int steal(int label) {(void) label; return -1;}
+
+    virtual int take(int label) {
+        (void) label;
+        return -1;
+    }
+
+    virtual int steal() { return -1; }
+
+    virtual int steal(int label) {
+        (void) label;
+        return -1;
+    }
 };
 
-class wsncmult : public workStealingAlgorithm
-{
+class wsncmult : public workStealingAlgorithm {
 private:
     int tail;
     int size;
@@ -158,108 +207,202 @@ private:
     std::vector<int> tasks;
 public:
     wsncmult(int size, int numThreads);
-    bool put(int task, int label);
-    int take(int label);
-    int steal(int label);
-    bool isEmpty(int label);
+
+    bool put(int task, int label) override;
+
+    int take(int label) override;
+
+    int steal(int label) override;
+
+    bool isEmpty(int label) override;
+
     void expand();
 };
 
-class chaselev : public workStealingAlgorithm
-{
+class chaselev : public workStealingAlgorithm {
 private:
     std::atomic<int> H;
     std::atomic<int> T;
     std::atomic<int> tasksSize;
-    std::atomic<int> *tasks;
+    std::atomic<int> *tasks = nullptr;
 public:
-    chaselev(int initialSize);
-    bool isEmpty();
-    bool put(int task);
-    int take();
-    int steal();
+    explicit chaselev(int initialSize);
+
+    bool isEmpty() override;
+
+    bool put(int task) override;
+
+    int take() override;
+
+    int steal() override;
+
     void expand();
+
     int getSize();
 };
 
-class cilk : public workStealingAlgorithm
-{
+class cilk : public workStealingAlgorithm {
 private:
     std::atomic<int> H;
     std::atomic<int> T;
     std::atomic<int> tasksSize;
-    std::atomic<int> *tasks;
+    std::atomic<int> *tasks = nullptr;
     std::mutex mtx;
 public:
-    cilk(int initialSize);
-    bool isEmpty();
-    bool put(int task);
-    int take();
-    int steal();
+    explicit cilk(int initialSize);
+
+    bool isEmpty() override;
+
+    bool put(int task) override;
+
+    int take() override;
+
+    int steal() override;
+
     void expand();
+
     int getSize();
 };
 
-class idempotentFIFO : public workStealingAlgorithm
-{
+class idempotentFIFO : public workStealingAlgorithm {
 private:
     std::atomic<int> head;
     std::atomic<int> tail;
     taskArrayWithSize tasks;
 public:
-    idempotentFIFO(int size);
-    bool isEmpty();
-    bool put(int task);
-    int take();
-    int steal();
+    explicit idempotentFIFO(int size);
+
+    bool isEmpty() override;
+
+    bool put(int task) override;
+
+    int take() override;
+
+    int steal() override;
+
     void expand();
+
     int getSize();
 };
 
 
-struct pair
-{
+struct pair {
     int t;
     int g;
+
     pair(int t, int g) : t(t), g(g) {};
 };
 
-class idempotentLIFO : public workStealingAlgorithm
-{
+class idempotentLIFO : public workStealingAlgorithm {
 private:
-    int* tasks;
+    int *tasks;
     int capacity;
-    std::atomic<pair*> anchor;
+    std::atomic<pair *> anchor;
 public:
-    idempotentLIFO(int size);
-    bool isEmpty();
-    bool put(int task);
-    int take();
-    int steal();
+    explicit idempotentLIFO(int size);
+
+    bool isEmpty() override;
+
+    bool put(int task) override;
+
+    int take() override;
+
+    int steal() override;
+
     void expand();
-    int getSize();
+
+    int getSize() const;
 };
 
-struct triplet
-{
+struct triplet {
     int head;
     int size;
     int tag;
+
     triplet(int, int, int);
 };
 
-class idempotentDeque : public workStealingAlgorithm
-{
+class idempotentDeque : public workStealingAlgorithm {
 private:
     int capacity;
     taskArrayWithSize tasks;
-    std::atomic<triplet*> anchor;
+    std::atomic<triplet *> anchor;
 public:
-    idempotentDeque(int size);
-    bool isEmpty();
-    bool put(int task);
-    int take();
-    int steal();
+    explicit idempotentDeque(int size);
+
+    bool isEmpty() override;
+
+    bool put(int task) override;
+
+    int take() override;
+
+    int steal() override;
+
     void expand();
+
     int getSize();
+};
+
+class wsncmultla : public workStealingAlgorithm {
+private:
+    int tail;
+    int size;
+    std::atomic<int> Head;
+    std::vector<int> head;
+    std::vector<int> tasks;
+public:
+    wsncmultla(int size, int numThreads);
+
+    bool put(int task, int label);
+
+    int take(int label);
+
+    int steal(int label);
+
+    bool isEmpty(int label);
+
+    void expand();
+};
+
+class bwsncmult : public workStealingAlgorithm {
+private:
+    std::atomic<int> Head;
+    int *head;
+    int *tasks;
+    bool *B;
+    int tail;
+    int capacity;
+public:
+    bwsncmult(int capacity, int numThreads);
+
+    bool put(int task, int label);
+
+    int take(int label);
+
+    int steal(int label);
+
+    bool isEmpty(int label);
+
+    void expand();
+};
+
+class bwsncmultla : public workStealingAlgorithm {
+private:
+    int tail;
+    int size;
+    std::atomic<int> Head;
+    int *head;
+    std::vector<int> tasks;
+public:
+    bwsncmultla(int size, int numThreads);
+
+    bool put(int task, int label);
+
+    int take(int label);
+
+    int steal(int label);
+
+    bool isEmpty(int label);
+
+    void expand();
 };
