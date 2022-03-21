@@ -1,4 +1,4 @@
-file(GLOB srcs "*.cpp")
+file(GLOB srcs "${workStealing_SOURCE_DIR}/src/*.cpp")
 file(GLOB hdrs "${workStealing_SOURCE_DIR}/include/ws/*.hpp")
 
 add_library(ws_library ${srcs} ${hdrs})

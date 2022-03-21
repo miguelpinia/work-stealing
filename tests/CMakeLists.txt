@@ -30,6 +30,9 @@ set_target_properties(libgmock PROPERTIES
 include_directories("${source_dir}/googletest/include"
   "${source_dir}/googlemock/include")
 
-add_executable(testlib "main.cpp")
-target_link_libraries(testlib PRIVATE ws_library libgtest libgmock)
-add_test(NAME testlibtest COMMAND testlib)
+include(CTest)
+set(TEST_BINARY ${PROJECT_NAME}_test)
+
+add_executable(${TEST_BINARY} "main.cpp")
+target_link_libraries(${TEST_BINARY} PRIVATE ws_library libgtest libgmock)
+add_test(NAME ${TEST_BINARY} COMMAND ${TEST_BINARY})
