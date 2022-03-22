@@ -7,7 +7,6 @@
 
 int suma(int a, int b);
 
-
 ///////////////
 // Constants //
 ///////////////
@@ -111,7 +110,7 @@ public:
 
     graph(std::vector<edge> edges, bool directed, int root, int numVertices, GraphType type);
 
-    //graph(bool directed, int root, int numVertices, GraphType type);
+    graph(bool directed, int root, int numVertices, GraphType type);
 
     void addEdge(int src, int dest);
 
@@ -139,7 +138,6 @@ public:
 
     bool isDirected();
 };
-
 
 //////////////////////////////
 // Work-stealing algorithms //
@@ -196,27 +194,6 @@ public:
         (void) label;
         return -1;
     }
-};
-
-class wsncmult : public workStealingAlgorithm {
-private:
-    int tail;
-    int size;
-    std::atomic<int> Head;
-    std::vector<int> head;
-    std::vector<int> tasks;
-public:
-    wsncmult(int size, int numThreads);
-
-    bool put(int task, int label) override;
-
-    int take(int label) override;
-
-    int steal(int label) override;
-
-    bool isEmpty(int label) override;
-
-    void expand();
 };
 
 class chaselev : public workStealingAlgorithm {
@@ -343,6 +320,29 @@ public:
     int getSize();
 };
 
+class wsncmult : public workStealingAlgorithm {
+private:
+    int tail;
+    int capacity;
+    std::atomic<int> Head;
+    std::vector<int> head;
+    std::atomic<int>* tasks;
+public:
+    wsncmult(int size, int numThreads);
+
+    bool put(int task, int label) override;
+
+    int take(int label) override;
+
+    int steal(int label) override;
+
+    bool isEmpty(int label) override;
+
+    void expand();
+
+    int getCapacity() const;
+};
+
 class wsncmultla : public workStealingAlgorithm {
 private:
     int tail;
@@ -366,13 +366,15 @@ public:
 
 class bwsncmult : public workStealingAlgorithm {
 private:
-    std::atomic<int> Head;
-    int *head;
-    int *tasks;
-    bool *B;
     int tail;
     int capacity;
+    int *head;
+    std::atomic<int> Head = 0;
+    std::atomic<int> *tasks;
+    std::atomic<bool> *B;
 public:
+    bwsncmult();
+
     bwsncmult(int capacity, int numThreads);
 
     bool put(int task, int label);
@@ -384,6 +386,8 @@ public:
     bool isEmpty(int label);
 
     void expand();
+
+    int getCapacity() const;
 };
 
 class bwsncmultla : public workStealingAlgorithm {
@@ -393,6 +397,8 @@ private:
     std::atomic<int> Head;
     int *head;
     std::vector<int> tasks;
+    // std::vector<bool> B;
+
 public:
     bwsncmultla(int size, int numThreads);
 
@@ -406,3 +412,13 @@ public:
 
     void expand();
 };
+
+/////////////////////////
+// Auxiliary functions //
+/////////////////////////
+
+int mod(int a, int b);
+graph torus2D(int shape);
+graph torus2D_60(int shape);
+graph torus3D(int shape);
+graph torus3D40(int shape);

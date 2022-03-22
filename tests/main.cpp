@@ -230,6 +230,112 @@ TEST_F(GraphTest, testGetChilds) {
     EXPECT_THAT(l3, ::testing::ContainerEq(g1.getChildren(3)));
 }
 
+TEST_F(GraphTest, testTorus2D) {
+    int shape = 20;
+    graph result = torus2D(shape);
+    EXPECT_EQ(GraphType::TORUS_2D, result.getType());
+    EXPECT_EQ(400, result.getNumberVertices());
+    EXPECT_EQ(false, result.isDirected());
+    for (int k = 0; k < 400; k++) {
+        int i = k / shape;
+        int j = k % shape;
+        std::list<int> l = {
+            mod((i - 1), shape) * shape + j,
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
+            i * shape + mod((j - 1), shape),
+            mod((i - 1), shape) * shape + j,
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
+            i * shape + mod((j - 1), shape),
+        };
+        EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(k)));
+    }
+}
+
+TEST_F(GraphTest, testTorus2D60) {
+    int shape = 20;
+    graph result = torus2D_60(shape);
+    EXPECT_EQ(GraphType::TORUS_2D_60, result.getType());
+    EXPECT_EQ(400, result.getNumberVertices());
+    EXPECT_EQ(false, result.isDirected());
+    for (int k = 0; k < 400; k++) {
+        int i = k / shape;
+        int j = k % shape;
+        std::list<int> l = {
+            mod((i - 1), shape) * shape + j,
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
+            i * shape + mod((j - 1), shape),
+            mod((i - 1), shape) * shape + j,
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
+            i * shape + mod((j - 1), shape),
+        };
+        EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(k)));
+    }
+}
+
+
+TEST_F(GraphTest, testTorus3D) {
+    int shape = 10;
+    int expectedNumVert = 1000;
+    graph result = torus3D(shape);
+    EXPECT_EQ(GraphType::TORUS_3D, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(false, result.isDirected());
+    int i, j, k;
+    for (int m = 0; m < expectedNumVert; m++) {
+        k = m % shape;
+        j = (m / shape) % shape;
+        i = (m / (shape * shape)) % shape;
+        std::list<int> l = {
+            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
+            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k
+        };
+        EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(m)));
+    }
+}
+
+TEST_F(GraphTest, testTorus3D40) {
+    int shape = 10;
+    int expectedNumVert = 1000;
+    graph result = torus3D40(shape);
+    EXPECT_EQ(GraphType::TORUS_3D_40, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(false, result.isDirected());
+    int i, j, k;
+    for (int m = 0; m < expectedNumVert; m++) {
+        k = m % shape;
+        j = (m / shape) % shape;
+        i = (m / (shape * shape)) % shape;
+        std::list<int> l = {
+            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
+            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k
+        };
+        EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(m)));
+    }
+}
 
 class TaskArrayTest : public ::testing::Test {
 protected:
@@ -258,57 +364,6 @@ TEST_F(TaskArrayTest, testGet) {
     EXPECT_EQ(-1, array.get(0));
     array.set(0, 10101);
     EXPECT_EQ(10101, array.get(0));
-}
-
-class wsncmultTest : public ::testing::Test {
-protected:
-    wsncmultTest() {}
-
-    ~wsncmultTest() {}
-
-    void SetUp() {}
-
-    void TearDown() {}
-};
-
-TEST_F(wsncmultTest, testIsEmpty) {
-    wsncmult ws(10, 1);
-    EXPECT_EQ(true, ws.isEmpty(0));
-    wsncmult ws1(10, 2);
-    EXPECT_EQ(true, ws1.isEmpty(0));
-    ws1.put(10, 1);
-    EXPECT_EQ(false, ws1.isEmpty(0));
-    EXPECT_EQ(false, ws1.isEmpty(1));
-}
-
-TEST_F(wsncmultTest, testNotEmpty) {
-    wsncmult ws(10, 4);
-    ws.put(10, 3);
-    EXPECT_EQ(false, ws.isEmpty(3));
-}
-
-TEST_F(wsncmultTest, testFIFO_take) {
-    wsncmult ws(10, 1);
-    for (int i = 0; i < 10; i++) {
-        bool inserted = ws.put(i, 0);
-        EXPECT_TRUE(inserted);
-    }
-    for (int i = 0; i < 10; i++) {
-        int output = ws.take(0);
-        EXPECT_EQ(i, output);
-    }
-}
-
-TEST_F(wsncmultTest, testFIFO_steal) {
-    wsncmult ws(10, 1);
-    for (int i = 0; i < 10; i++) {
-        bool inserted = ws.put(i, 0);
-        EXPECT_TRUE(inserted);
-    }
-    for (int i = 0; i < 10; i++) {
-        int output = ws.steal(0);
-        EXPECT_EQ(i, output);
-    }
 }
 
 ////////////////////////////////////////////////////
@@ -688,6 +743,139 @@ TEST_F(idempotentDequeTest, test_resize) {
     EXPECT_EQ(20, ws.getSize());
     for (int i = 0; i < 10; i++) ws.put(i);
     EXPECT_EQ(40, ws.getSize());
+}
+
+///////////////////////////////////////////
+// Work-stealing with multiplicity tests //
+///////////////////////////////////////////
+
+class wsncmultTest : public ::testing::Test {
+protected:
+    wsncmultTest() {}
+
+    ~wsncmultTest() {}
+
+    void SetUp() {}
+
+    void TearDown() {}
+};
+
+TEST_F(wsncmultTest, testIsEmpty) {
+    wsncmult ws(10, 1);
+    EXPECT_EQ(true, ws.isEmpty(0));
+    wsncmult ws1(10, 2);
+    EXPECT_EQ(true, ws1.isEmpty(0));
+    ws1.put(10, 1);
+    EXPECT_EQ(false, ws1.isEmpty(0));
+    EXPECT_EQ(false, ws1.isEmpty(1));
+}
+
+TEST_F(wsncmultTest, testNotEmpty) {
+    wsncmult ws(10, 4);
+    ws.put(10, 3);
+    EXPECT_EQ(false, ws.isEmpty(3));
+}
+
+TEST_F(wsncmultTest, testFIFO_take) {
+    wsncmult ws(10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.take(0);
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(wsncmultTest, testFIFO_steal) {
+    wsncmult ws(10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.steal(0);
+        EXPECT_EQ(i, output);
+
+    }
+}
+
+TEST_F(wsncmultTest, test_resize) {
+    wsncmult ws(10, 1);
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(10, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(20, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(40, ws.getCapacity());
+}
+
+/////////////////////////////////////////////
+// Bounded work-stealing with multiplicity //
+/////////////////////////////////////////////
+
+class bwsncmultTest : public ::testing::Test {
+protected:
+    bwsncmultTest() {}
+
+    ~bwsncmultTest() {}
+
+    void SetUp() {}
+
+    void TearDown() {}
+};
+
+
+TEST_F(bwsncmultTest, testIsEmpty) {
+    bwsncmult ws(10, 1);
+    EXPECT_EQ(true, ws.isEmpty(0));
+    bwsncmult ws1(10, 2);
+    EXPECT_EQ(true, ws1.isEmpty(0));
+    ws1.put(10, 1);
+    EXPECT_EQ(false, ws1.isEmpty(0));
+    EXPECT_EQ(false, ws1.isEmpty(1));
+}
+
+TEST_F(bwsncmultTest, testNotEmpty) {
+    bwsncmult ws(10, 4);
+    ws.put(10, 3);
+    EXPECT_EQ(false, ws.isEmpty(3));
+}
+
+TEST_F(bwsncmultTest, testFIFO_take) {
+    bwsncmult ws(10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.take(0);
+
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(bwsncmultTest, testFIFO_steal) {
+    bwsncmult ws(10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.steal(0);
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(bwsncmultTest, test_resize) {
+    bwsncmult ws(10, 1);
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(10, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(20, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(40, ws.getCapacity());
 }
 
 int main(int argc, char **argv) {

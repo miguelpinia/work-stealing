@@ -1,6 +1,8 @@
 #include "ws/lib.hpp"
 #include <algorithm>
 #include <iostream>
+#include <random>
+
 
 int suma(int a, int b) {
     return a + b;
@@ -81,13 +83,19 @@ int edge::getDest() const { return dest; }
 graph::graph() : directed(false), root(0), numEdges(0), numVertices(10), type(GraphType::RANDOM) {}
 
 graph::graph(std::vector<edge> const edges, bool directed, int root, int numVertices, GraphType type) : directed(directed),
-                                                                                                  root(root),
-                                                                                                  numEdges(0),
-                                                                                                  numVertices(
-                                                                                                          numVertices),
-                                                                                                  type(type) {
+                                                                                                        root(root),
+                                                                                                        numEdges(0),
+                                                                                                        numVertices(numVertices),
+                                                                                                        type(type) {
     for (auto i = 0; i < numVertices; i++) vertices.emplace_back(vertex(directed, i));
     for (auto edge: edges) addEdge(edge);
+}
+
+graph::graph(bool directed, int root, int numVertices, GraphType type) : directed(directed),
+                                                                         root(root), numEdges(0),
+                                                                         numVertices(numVertices),
+                                                                         type(type) {
+    for (int i = 0; i < numVertices; i++) vertices.emplace_back(vertex(directed, i));
 }
 
 void graph::addEdge(int src, int dest) {
@@ -589,10 +597,14 @@ int idempotentDeque::getSize() {
 // Work stealing algorithms and classes //
 //////////////////////////////////////////
 
-wsncmult::wsncmult(int size, int numThreads) : tail(-1), size(size) {
+wsncmult::wsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity) {
     Head = 0;
     head = std::vector<int>(numThreads, 0);
-    tasks = std::vector<int>(size, BOTTOM);
+    tasks = new std::atomic<int>[capacity];
+    for (int i = 0; i < capacity; i++) {
+        tasks[i] = BOTTOM;
+    }
+
 }
 
 bool wsncmult::isEmpty(int label) {
@@ -603,8 +615,8 @@ bool wsncmult::isEmpty(int label) {
 bool wsncmult::put(int task, int label) {
     (void) label;
     tail++;
-    if (tail == (int) tasks.size() - 1) expand();
-    if (tail <= (int) tasks.size() - 3) {
+    if (tail == capacity) expand();
+    if (tail <= capacity - 3) {
         tasks[tail + 1] = BOTTOM;
         tasks[tail + 2] = BOTTOM;
     }
@@ -636,42 +648,308 @@ int wsncmult::steal(int label) {
     return EMPTY;
 }
 
-void wsncmult::expand() {}
+void wsncmult::expand() {
+    auto newCapacity = 2 * capacity;
+    auto newData = new std::atomic<int>[newCapacity];
+    for (int i = 0; i < capacity; i++) newData[i] = tasks[i].load();
+    tasks = newData;
+    std::atomic_thread_fence(std::memory_order_release);
+    capacity = 2 * capacity;
+    std::atomic_thread_fence(std::memory_order_release);
+}
+
+int wsncmult::getCapacity() const {
+    return capacity;
+}
 
 
 ////////////////////////////////////////////////////
 // Bounded work-stealing algorithm implementation //
 ////////////////////////////////////////////////////
 
-// bwsncmult::bwsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity)
-// {
-//     Head = 0;
-//     head = new int[numThreads];
-//     tasks = new int[capacity];
-//     B = new bool[capacity];
-//     for (int i = 0; i < numThreads; i++) {
-//         head[i] = 0;
-//     }
-//     for (int i = 0; i < capacity; i++) {
-//         tasks[i] = 0;
-//         B[i] = false;
-//     }
-// }
+bwsncmult::bwsncmult() : tail(-1), capacity(0) {}
 
-// bool bwsncmult::isEmpty(int label)
-// {
-//     (void) label;
-//     return Head.load() > tail;
-// }
+bwsncmult::bwsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity)
+{
+    head = new int[numThreads];
+    tasks = new std::atomic<int>[capacity];
+    B = new std::atomic<bool>[capacity];
+    for (int i = 0; i < numThreads; i++) {
+        head[i] = 0;
+    }
+    for (int i = 0; i < capacity; i++) {
+        tasks[i] = 0;
+        B[i] = false;
+    }
+    B[0] = true;
+    B[1] = true;
+}
 
-// bool bwsncmult::put(int task, int label)
-// {
-//     if (tail == capacity) {
-//         expand();
-//     }
-//     if (tail <= capacity - 3) {
-//         tasks[tail + 1] = BOTTOM;
-//         tasks[tail + 1] = BOTTOM;
+bool bwsncmult::isEmpty(int label)
+{
+    (void) label;
+    return Head.load() > tail;
+}
 
-//     }
-// }
+bool bwsncmult::put(int task, int label)
+{
+    (void) label;
+    tail++;
+    if (tail == capacity) expand();
+    if (tail <= capacity - 3) {
+        tasks[tail + 1] = BOTTOM;
+        tasks[tail + 2] = BOTTOM;
+        B[tail + 1] = true;
+        B[tail + 2] = true;
+    }
+    tasks[tail] = task;
+    return true;
+}
+
+int bwsncmult::take(int label)
+{
+    head[label] = std::max(head[label], Head.load());
+    if (head[label] <= tail) {
+        int x = tasks[head[label]];
+        head[label]++;
+        Head.store(head[label]);
+        return x;
+    }
+    return EMPTY;
+}
+
+int bwsncmult::steal(int label)
+{
+    while (true) {
+        head[label] = std::max(head[label], Head.load());
+        if (head[label] <= tail) {
+            int x = tasks[head[label]];
+            if (x != BOTTOM) {
+                int h = head[label];
+                head[label]++;
+                if (B[h].exchange(false)) {
+                    Head.store(head[label]);
+                    return x;
+                }
+            } else {
+                return EMPTY;
+            }
+        } else {
+            return EMPTY;
+        }
+    }
+}
+
+int bwsncmult::getCapacity() const {
+    return capacity;
+}
+
+void bwsncmult::expand() {
+    auto newCapacity = 2 * capacity;
+    auto newData = new std::atomic<int>[newCapacity];
+    for (int i = 0; i < newCapacity; i++) {
+        newData[i] = BOTTOM;
+    }
+
+    std::atomic<bool>* newState = new std::atomic<bool>[newCapacity];
+    for (int i = 0; i < newCapacity; i++) newState[i] = true;
+    std::atomic_thread_fence(std::memory_order_release);
+
+    for (int i = 0; i < capacity; i++) {
+        newData[i] = tasks[i].load();
+        newState[i] = B[i].load();
+    }
+    std::atomic<int> *tmp1 = tasks;
+    std::atomic<bool> *tmp2 = B;
+    tasks = newData;
+    std::atomic_thread_fence(std::memory_order_release);
+    B = newState;
+    std::atomic_thread_fence(std::memory_order_release);
+    delete[] tmp1;
+    delete[] tmp2;
+    capacity = 2 * capacity;
+    std::atomic_thread_fence(std::memory_order_release);
+}
+
+int mod(int a, int b)
+{
+    return ((a % b) + b) % b;
+}
+
+graph torus2D(int shape)
+{
+    bool directed = false;
+    int numEdges = shape * shape * 4;
+    int numVertices = shape * shape;
+    graph g(directed, 0, numVertices, GraphType::TORUS_2D);
+    int neighbor;
+    int i, j, currentIdx, pos;
+    for(int k = 0; k < numEdges; k++) {
+        j = (k / 4) % shape;
+        i = k / (shape * 4);
+        currentIdx = (i * shape) + j;
+        pos = k % 4;
+        switch(pos) {
+        case 0:
+            neighbor = mod((i - 1), shape) * shape + j;
+            break;
+        case 1:
+            neighbor = i * shape + mod((j + 1), shape);
+            break;
+        case 2:
+            neighbor = mod((i + 1), shape) * shape + j;
+            break;
+        case 3:
+            neighbor = i * shape + mod((j - 1), shape);
+            break;
+        default:
+            neighbor = 0;
+        }
+        g.addEdge(currentIdx, neighbor);
+    }
+    return g;
+}
+
+graph torus2D_60(int shape)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(1, shape);
+    bool directed = false;
+    int numVertices = shape * shape;
+    int numEdges = numVertices * 4;
+    graph g(directed, 0, numVertices, GraphType::TORUS_2D_60);
+    int randomNumber, i, j, currentIdx, pos;
+    int neighbor;
+    for (int k = 0; k < numEdges; k++) {
+        i = k / (shape * 4);
+        j = (k / 4) % shape;
+        currentIdx = (i * shape) + j;
+        pos = k % 4;
+        randomNumber = distrib(gen);
+        switch(pos) {
+        case 0:
+            neighbor = mod((i - 1), shape) * shape + j;
+            g.addEdge(currentIdx, neighbor);
+            break;
+        case 1:
+            if (randomNumber <= 60) {
+                neighbor = i * shape + mod((j + 1), shape);
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 2:
+            if (randomNumber <= 60) {
+                neighbor = mod((i + 1), shape) * shape + j;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 3:
+            if (randomNumber <= 60) {
+                neighbor = i * shape + mod((j - 1), shape);
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        default: break;
+        }
+    }
+    return g;
+}
+
+graph torus3D(int shape)
+{
+    bool directed = false;
+    int numVertices = shape * shape * shape;
+    int numEdges = numVertices * 6;
+    graph g(directed, 0, numVertices, GraphType::TORUS_3D);
+    int i, j, k, currentIdx, pos, neighbor;
+    for (int m = 0; m < numEdges; m++) {
+        k = (m / 6) % shape;
+        j = (m / (shape * 6)) % shape;
+        i = (m / (shape * shape * 6)) % shape;
+        currentIdx = (i * shape * shape) + (j * shape) + k;
+        pos = m % 6;
+        switch(pos) {
+        case 0:
+            neighbor = (i * shape * shape) + (j * shape) + mod((k - 1), shape);
+            break;
+        case 1:
+            neighbor = (i * shape * shape) + (j * shape) + mod((k + 1), shape);
+            break;
+        case 2:
+            neighbor = (i * shape * shape) + (mod((j - 1), shape) * shape) + k;
+            break;
+        case 3:
+            neighbor = (i * shape * shape) + (mod((j + 1), shape) * shape) + k;
+            break;
+        case 4:
+            neighbor = (mod((i - 1), shape) * shape * shape) + (j * shape) + k;
+            break;
+        case 5:
+            neighbor = (mod((i + 1), shape) * shape * shape) + (j * shape) + k;
+            break;
+        default:
+            neighbor = 0;
+        }
+        g.addEdge(currentIdx, neighbor);
+    }
+    return g;
+}
+
+graph torus3D40(int shape)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(1, shape);
+    bool directed = false;
+    int numVertices = shape * shape * shape;
+    int numEdges = numVertices * 6;
+    graph g(directed, 0, numVertices, GraphType::TORUS_3D_40);
+    int i, j, k, currentIdx, pos, neighbor, randomNum;
+    for (int m = 0; m < numEdges; m++) {
+        k = (m/6) % shape;
+        j = (m / (shape * 6)) % shape;
+        i = (m / (shape * shape * 6)) % shape;
+        currentIdx = (i * shape * shape) + (j * shape) + k;
+        pos = m % 6;
+        randomNum = distrib(gen);
+        switch (pos) {
+        case 0:
+            neighbor = (i * shape * shape) + (j * shape) + mod(k - 1, shape);
+            g.addEdge(currentIdx, neighbor);
+            break;
+        case 1:
+            if (randomNum <= 40) {
+                neighbor = (i * shape * shape) + (j * shape) + mod(k + 1, shape);
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 2:
+            if (randomNum <= 40) {
+                neighbor = (i * shape * shape) + mod(j - 1, shape) * shape + k;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 3:
+            if (randomNum <= 40) {
+                neighbor = (i * shape * shape) + mod(j + 1, shape) * shape + k;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 4:
+            if (randomNum <= 40) {
+                neighbor = (mod(i - 1, shape) * shape * shape) + (j * shape) + k;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 5:
+            if (randomNum <= 40) {
+                neighbor = (mod(i + 1, shape) * shape * shape) + (j * shape) + k;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return g;
+}
