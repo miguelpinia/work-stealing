@@ -878,6 +878,136 @@ TEST_F(bwsncmultTest, test_resize) {
     EXPECT_EQ(40, ws.getCapacity());
 }
 
+class STTest : public ::testing::Test {
+protected:
+    STTest() {}
+
+    ~STTest() {}
+
+    void SetUp() {}
+
+    void TearDown() {}
+};
+
+TEST_F(STTest, spanningTreeWSNCTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::WS_NC_MULT_OPT,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, true};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeChaseLevTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::CHASELEV,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, false};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeCilkTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::CILK,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, false};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeIdemFIFOTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::IDEMPOTENT_FIFO,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, false};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeIdemDequeTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::IDEMPOTENT_DEQUE,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, false};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeIdemLIFOTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::IDEMPOTENT_LIFO,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, false};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
+TEST_F(STTest, spanningTreeBWSNCTest)
+{
+    int numProcessors = 8;
+    Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::B_WS_NC_MULT_OPT,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, true};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    EXPECT_EQ(GraphCycleType::TREE, type);
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();

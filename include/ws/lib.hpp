@@ -4,6 +4,12 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <climits>
+#include <chrono>
+#include <thread>
+#include <barrier>
+#include <iostream>
+
 
 int suma(int a, int b);
 
@@ -42,6 +48,17 @@ enum class AlgorithmType {
     WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
     B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
     B_WS_NC_MULT_LA_OPT // Work-stealing bounded with multiplicity ("linked-lists")
+};
+
+enum class StepSpanningTreeType {
+    COUNTER,
+    DOUBLE_COLLECT
+};
+
+enum GraphCycleType {
+    CYCLE,
+    DISCONNECTED,
+    TREE
 };
 
 ////////////////////////////
@@ -146,13 +163,20 @@ public:
 class taskArrayWithSize {
 private:
     int size;
-    std::vector<int> array;
+    std::unique_ptr<int[]> array;
 public:
     taskArrayWithSize();
-
     explicit taskArrayWithSize(int size);
-
     taskArrayWithSize(int size, int defaultValue);
+    taskArrayWithSize(const taskArrayWithSize& other);
+    taskArrayWithSize& operator=( const taskArrayWithSize& other )
+    {
+        size = other.size;
+        auto newArray = new int[other.size];
+        for (int i = 0; i < other.size; i++) newArray[i] = other.array[i];
+        array.reset(newArray);
+        return *this;
+    }
 
     int &getSize();
 
@@ -194,6 +218,9 @@ public:
         (void) label;
         return -1;
     }
+    virtual void printType() {
+        std::cout << "Simple" << std::endl;
+    }
 };
 
 class chaselev : public workStealingAlgorithm {
@@ -216,6 +243,10 @@ public:
     void expand();
 
     int getSize();
+    void printType() {
+        std::cout << "chase-lev" << std::endl;
+    }
+
 };
 
 class cilk : public workStealingAlgorithm {
@@ -239,6 +270,9 @@ public:
     void expand();
 
     int getSize();
+    void printType() {
+        std::cout << "cilk" << std::endl;
+    }
 };
 
 class idempotentFIFO : public workStealingAlgorithm {
@@ -260,6 +294,10 @@ public:
     void expand();
 
     int getSize();
+
+    void printType() {
+        std::cout << "idempotent FIFO" << std::endl;
+    }
 };
 
 
@@ -272,7 +310,7 @@ struct pair {
 
 class idempotentLIFO : public workStealingAlgorithm {
 private:
-    int *tasks;
+    std::unique_ptr<int[]> tasks;
     int capacity;
     std::atomic<pair *> anchor;
 public:
@@ -289,6 +327,10 @@ public:
     void expand();
 
     int getSize() const;
+    void printType() {
+        std::cout << "idempotent LIFO" << std::endl;
+    }
+
 };
 
 struct triplet {
@@ -318,6 +360,10 @@ public:
     void expand();
 
     int getSize();
+
+    void printType() {
+        std::cout << "idempotent DEQUE" << std::endl;
+    }
 };
 
 class wsncmult : public workStealingAlgorithm {
@@ -325,7 +371,7 @@ private:
     int tail;
     int capacity;
     std::atomic<int> Head;
-    std::vector<int> head;
+    std::unique_ptr<int[]> head;
     std::atomic<int>* tasks;
 public:
     wsncmult(int size, int numThreads);
@@ -341,6 +387,9 @@ public:
     void expand();
 
     int getCapacity() const;
+    void printType() {
+        std::cout << "WSNC_MULT" << std::endl;
+    }
 };
 
 class wsncmultla : public workStealingAlgorithm {
@@ -362,6 +411,10 @@ public:
     bool isEmpty(int label);
 
     void expand();
+
+    void printType() {
+        std::cout << "WCNC_MULT_LA" << std::endl;
+    }
 };
 
 class bwsncmult : public workStealingAlgorithm {
@@ -388,6 +441,10 @@ public:
     void expand();
 
     int getCapacity() const;
+    void printType() {
+        std::cout << "BWSNC_MULT" << std::endl;
+    }
+
 };
 
 class bwsncmultla : public workStealingAlgorithm {
@@ -411,14 +468,136 @@ public:
     bool isEmpty(int label);
 
     void expand();
+    void printType() {
+        std::cout << "BWSNC_MULT_LA" << std::endl;
+    }
 };
 
 /////////////////////////
 // Auxiliary functions //
 /////////////////////////
 
+struct Params {
+    GraphType graphType;
+    int shape;
+    bool report;
+    int numThreads;
+    AlgorithmType algType;
+    int structSize;
+    int numIterExps;
+    StepSpanningTreeType stepSpanningType;
+    bool directed;
+    bool stealTime;
+    bool allTime;
+    bool specialExecution;
+};
+
+struct Report {
+    std::atomic<int> takes = 0;
+    std::atomic<int> puts = 0;
+    std::atomic<int> steals = 0;
+    std::atomic<long long> maxSteal = LLONG_MIN;
+    std::atomic<long long> minSteal = LLONG_MAX;
+    std::atomic<long long> avgSteal = 0;
+    std::atomic<long long> avgIter = 0;
+    long long executionTime; // Maybe it could be change by some type provided in chronno header
+    int numProcessors_;
+    int* processors_;
+    Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
+    void incTakes() { ++takes; }
+    void incPuts() { ++puts; }
+    void incSteals() { ++steals; }
+
+};
+
+class AbstractStepSpanningTree
+{
+public:
+    int root_;
+    int label_;
+    int numThreads_;
+    bool stealTime_;
+    graph& g_;
+    Report& report_;
+    std::atomic<int>* colors_;
+    std::atomic<int>* parents_;
+    workStealingAlgorithm* algorithm_;
+    workStealingAlgorithm** algorithms_;
+
+
+    AbstractStepSpanningTree(int root, int label, bool stealTime,
+                             graph& g, std::atomic<int>* colors,
+                             std::atomic<int>* parents,
+                             workStealingAlgorithm* algorithm,
+                             workStealingAlgorithm** algorithms,
+                             Report& report, int numThreads)
+        : root_(root),
+          label_(label),
+          numThreads_(numThreads),
+          stealTime_(stealTime),
+          g_(g),
+          report_(report),
+          colors_(colors),
+          parents_(parents),
+          algorithm_(algorithm),
+          algorithms_(algorithms)  {}
+
+
+    virtual void graph_traversal_step() = 0;
+};
+
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args );
+
+int pickRandomThread(int numThreads, int processor);
+
+class CounterStepSpanningTree : public AbstractStepSpanningTree
+{
+private:
+    bool specialExecution_;
+    std::atomic<int>& counter_;
+    std::atomic<int>* visited_;
+
+public:
+    CounterStepSpanningTree(int root, int label, bool stealTime,
+                            graph& g, std::atomic<int>* colors,
+                            std::atomic<int>* parents,
+                            workStealingAlgorithm* algorithm,
+                            workStealingAlgorithm* algorithms[],
+                            Report& report, int numThreads,
+                            bool specialExecution,
+                            std::atomic<int>& counter,
+                            std::atomic<int>* visited)
+    : AbstractStepSpanningTree(root, label, stealTime, g, colors, parents,
+                               algorithm, algorithms, report, numThreads),
+      specialExecution_(specialExecution), counter_(counter),
+      visited_(visited)
+    {}
+
+    void graph_traversal_step();
+    void generalExecution();
+    void specialExecution();
+
+};
+
+
 int mod(int a, int b);
 graph torus2D(int shape);
 graph torus2D_60(int shape);
 graph torus3D(int shape);
 graph torus3D40(int shape);
+graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bool directed);
+
+bool isCyclic(graph& g, bool* visited);
+bool hasCycle(graph* g);
+bool isTree(graph& g);
+
+graph spanningTree(graph& g, int* roots, Report& report, Params& params);
+
+GraphCycleType detectCycleType(graph& g);
+
+workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int capacity, int numThreads);
+
+int* stubSpanning(graph& g, int size);
+
+bool inArray(int val, int* array, int size);

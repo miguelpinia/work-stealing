@@ -2,6 +2,9 @@ find_package(Threads REQUIRED)
 
 include(ExternalProject)
 
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+
 ExternalProject_Add(
         gtest
         URL https://github.com/google/googletest/archive/refs/tags/release-1.11.0.zip
