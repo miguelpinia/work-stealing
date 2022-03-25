@@ -5,7 +5,10 @@
 #include <queue>
 #include <stack>
 #include <deque>
-
+#include <unordered_map>
+#include <list>
+#include <fstream>
+#include <cassert>
 #include <memory>
 #include <string>
 #include <stdexcept>
@@ -777,6 +780,10 @@ void bwsncmult::expand() {
     std::atomic_thread_fence(std::memory_order_release);
 }
 
+////////////////////
+// Util functions //
+////////////////////
+
 int mod(int a, int b)
 {
     return ((a % b) + b) % b;
@@ -972,28 +979,49 @@ int pickRandomThread(int numThreads, int self) {
 workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int capacity, int numThreads)
 {
     switch (algType) {
-        case AlgorithmType::CILK:
-            return new cilk(capacity);
-        case AlgorithmType::CHASELEV:
-            return new chaselev(capacity);
-        case AlgorithmType::IDEMPOTENT_FIFO:
-            return new idempotentFIFO(capacity);
-        case AlgorithmType::IDEMPOTENT_LIFO:
-            return new idempotentLIFO(capacity);
-        case AlgorithmType::IDEMPOTENT_DEQUE:
-            return new idempotentDeque(capacity);
-        case AlgorithmType::WS_NC_MULT_OPT:
-            return new wsncmult(capacity, numThreads);
-        case AlgorithmType::B_WS_NC_MULT_OPT:
-            return new bwsncmult(capacity, numThreads);
-        case AlgorithmType::SIMPLE:
-            break;
-        case AlgorithmType::WS_NC_MULT_LA_OPT:
-            break;
-        case AlgorithmType::B_WS_NC_MULT_LA_OPT:
-            break;
+    case AlgorithmType::CILK:
+        return new cilk(capacity);
+    case AlgorithmType::CHASELEV:
+        return new chaselev(capacity);
+    case AlgorithmType::IDEMPOTENT_FIFO:
+        return new idempotentFIFO(capacity);
+    case AlgorithmType::IDEMPOTENT_LIFO:
+        return new idempotentLIFO(capacity);
+    case AlgorithmType::IDEMPOTENT_DEQUE:
+        return new idempotentDeque(capacity);
+    case AlgorithmType::WS_NC_MULT_OPT:
+        return new wsncmult(capacity, numThreads);
+    case AlgorithmType::B_WS_NC_MULT_OPT:
+        return new bwsncmult(capacity, numThreads);
+    case AlgorithmType::LAST:
+        break;
+        // case AlgorithmType::SIMPLE:
+        //     break;
+        // case AlgorithmType::WS_NC_MULT_LA_OPT:
+        //     break;
+        // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
+        //     break;
     }
     return new workStealingAlgorithm();
+}
+
+graph graphFactory(GraphType type, int shape)
+{
+    switch(type) {
+    case GraphType::TORUS_2D:
+        return torus2D(shape);
+    case GraphType::TORUS_2D_60:
+        return torus2D_60(shape);
+    case GraphType::TORUS_3D:
+        return torus3D(shape);
+    case GraphType::TORUS_3D_40:
+        return torus3D40(shape);
+    case GraphType::RANDOM:
+    case GraphType::KGRAPH:
+    default:
+        return torus2D(shape);
+    }
+
 }
 
 graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bool directed)
@@ -1005,7 +1033,7 @@ graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bo
     return g;
 }
 
-graph spanningTree(graph& g, int* roots, Report& report, Params& params)
+graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
 {
     std::vector<std::thread> threads;
     std::atomic<int>* colors = new std::atomic<int>[g.getNumberVertices()];
@@ -1301,4 +1329,147 @@ void CounterStepSpanningTree::specialExecution()
             }
         }
     } while(counter_.load() < g_.getNumberVertices());
+}
+
+GraphType getGraphTypeFromString(std::string type) {
+    if (type == "TORUS_2D") return GraphType::TORUS_2D;
+    if (type == "TORUS_2D_60") return GraphType::TORUS_2D_60;
+    if (type == "TORUS_3D") return GraphType::TORUS_3D;
+    if (type == "TORUS_3D_40") return GraphType::TORUS_3D_40;
+    return GraphType::RANDOM;
+}
+
+std::string getGraphTypeFromEnum(GraphType type) {
+    if (type == GraphType::TORUS_2D) return "TORUS_2D";
+    if (type == GraphType::TORUS_2D_60) return "TORUS_2D_60";
+    if (type == GraphType::TORUS_3D) return "TORUS_3D";
+    if (type == GraphType::TORUS_3D_40) return "TORUS_3D_40";
+    return "RANDOM";
+}
+
+std::string getAlgorithmTypeFromEnum(AlgorithmType type)
+{
+    switch(type) {
+    case AlgorithmType::CHASELEV:
+        return "CHASELEV";
+    case AlgorithmType::CILK:
+        return "CILK";
+    case AlgorithmType::IDEMPOTENT_DEQUE:
+        return "IDEMPOTENT_DEQUE";
+    case AlgorithmType::IDEMPOTENT_LIFO:
+        return "IDEMPOTENT_LIFO";
+    case AlgorithmType::IDEMPOTENT_FIFO:
+        return "IDEMPOTENT_FIFO";
+    case AlgorithmType::WS_NC_MULT_OPT:
+        return "WS_NC_MULT";
+    case AlgorithmType::B_WS_NC_MULT_OPT:
+        return "B_WS_NC_MULT";
+    // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
+    // case AlgorithmType::WS_NC_MULT_LA_OPT:
+    // case AlgorithmType::SIMPLE:
+    default:
+        return "UNKNOWN";
+    }
+    return "UNKNOWN";
+}
+
+json experiment(ws::Params &params)
+{
+    graph g = graphFactory(params.graphType, params.shape);
+    int* processors = new int[params.numThreads];
+    Report r{params.numThreads, processors};
+    int* roots = stubSpanning(g, params.numThreads);
+    graph tree = spanningTree(g, roots, r, params);
+    assert(isTree(tree));
+    json result;
+    result["numThreads"] = params.numThreads;
+    result["executionTime"] = r.executionTime;
+    result["takes"] = r.takes.load();
+    result["puts"] = r.puts.load();
+    result["steals"] = r.steals.load();
+    result["graphType"] = getGraphTypeFromEnum(params.graphType);
+    result["algorithm"] = getAlgorithmTypeFromEnum(params.algType);
+    json par = params;
+    return result;
+}
+
+int calculateStructSize(GraphType type, int shape) {
+    switch(type) {
+    case GraphType::TORUS_2D:
+    case GraphType::TORUS_2D_60:
+        return shape * shape;
+    case GraphType::TORUS_3D:
+    case GraphType::TORUS_3D_40:
+        return shape * shape * shape;
+    case GraphType::RANDOM:
+    case GraphType::KGRAPH:
+    default:
+        return shape;
+    }
+
+}
+
+bool isEspecial(AlgorithmType type)
+{
+    switch(type) {
+    case AlgorithmType::WS_NC_MULT_OPT:
+    // case AlgorithmType::WS_NC_MULT_LA_OPT:
+    case AlgorithmType::B_WS_NC_MULT_OPT:
+    // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
+        return true;
+    default:
+        return false;
+    }
+}
+
+json experimentComplete(GraphType type, int shape)
+{
+    const int numProcessors = std::thread::hardware_concurrency();
+    json last;
+    std::unordered_map<AlgorithmType, std::vector<json>> data = buildLists();
+    std::vector<json> values;
+    for (int i = 0; i < numProcessors; i++) {
+        int structSize = calculateStructSize(type, shape);
+        for (int at = AlgorithmType::CHASELEV; at != AlgorithmType::LAST; at++) {
+            AlgorithmType atype = static_cast<AlgorithmType>(at);
+            bool special = isEspecial(atype);
+            ws::Params p{type, shape, false,
+                (i+ 1), atype, structSize, 10, StepSpanningTreeType::COUNTER,
+                false, false, false, special};
+            json result = experiment(p);
+            data[atype].emplace_back(result);
+            values.emplace_back(result);
+        }
+    }
+    // std::cout << std::setw(4) << values << std::endl;
+    last["values"] = values;
+    return last;
+}
+
+json compare(json properties) {
+    json result;
+    int vertexSize = properties["VERTEX_SIZE"]; // Graph's shape
+    int structSize = properties["STRUCT_SIZE"]; // Initial size for the task array of the work-stealing algorithm.
+    // GraphType graphType = getGraphTypeFromString(properties["GRAPH_TYPE"]); // Graph type
+    // bool directed = properties["DIRECTED"]; // Is directed the graph?
+    // bool stealTime = properties["STEAL_TIME"]; // Should we take the time performed by steals?
+    // int iterations = properties["ITERATIONS"]; // Number of iterations for experimentsn
+    const auto processorNum = std::thread::hardware_concurrency(); // Number of processes in the system.
+    // bool allTime = properties["ALL_TIME"];
+    // Params params{graphType, vertexSize, false, }
+    // std::unordered_map<AlgorithmType, std::list<Result>> lists = buildLists();
+    std::cout << string_format("%d, %d, processors: %d\n", vertexSize, structSize, processorNum);
+    result["FOO"] = 0;
+    std::cout << result << std::endl;
+    return result;
+}
+
+std::unordered_map<AlgorithmType, std::vector<json>> buildLists()
+{
+    std::unordered_map<AlgorithmType, std::vector<json>> lists;
+    for (int at = AlgorithmType::CHASELEV; at != AlgorithmType::LAST; at++) {
+        AlgorithmType atype = static_cast<AlgorithmType>(at);
+        lists[atype] = std::vector<json>();
+    }
+    return lists;
 }

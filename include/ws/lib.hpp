@@ -9,7 +9,9 @@
 #include <thread>
 #include <barrier>
 #include <iostream>
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 
 int suma(int a, int b);
 
@@ -28,7 +30,7 @@ static const int TOP = -3;
 ///////////
 
 
-enum class GraphType {
+enum GraphType {
     TORUS_2D,
     TORUS_2D_60,
     TORUS_3D,
@@ -37,20 +39,21 @@ enum class GraphType {
     KGRAPH
 };
 
-enum class AlgorithmType {
-    SIMPLE,  // No work-stealing algorithm
+enum AlgorithmType {
+    // SIMPLE,  // No work-stealing algorithm
     CHASELEV, // Chase-Lev work-stealing algorithm
     CILK,  // Cilk THE work-stealing algorithm
     IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
     IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
     IDEMPOTENT_FIFO,  // Idempotent work-stealing first-in first-out
     WS_NC_MULT_OPT,   // Work-stealing with multiplicity optimized ("infinite array")
-    WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
+    // WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
     B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
-    B_WS_NC_MULT_LA_OPT // Work-stealing bounded with multiplicity ("linked-lists")
+    // B_WS_NC_MULT_LA_OPT // Work-stealing bounded with multiplicity ("linked-lists")
+    LAST
 };
 
-enum class StepSpanningTreeType {
+enum StepSpanningTreeType {
     COUNTER,
     DOUBLE_COLLECT
 };
@@ -476,39 +479,106 @@ public:
 /////////////////////////
 // Auxiliary functions //
 /////////////////////////
+namespace ws {
+    struct Params {
+        GraphType graphType;
+        int shape;
+        bool report;
+        int numThreads;
+        AlgorithmType algType;
+        int structSize;
+        int numIterExps;
+        StepSpanningTreeType stepSpanningType;
+        bool directed;
+        bool stealTime;
+        bool allTime;
+        bool specialExecution;
+    };
 
-struct Params {
-    GraphType graphType;
-    int shape;
-    bool report;
-    int numThreads;
-    AlgorithmType algType;
-    int structSize;
-    int numIterExps;
-    StepSpanningTreeType stepSpanningType;
-    bool directed;
-    bool stealTime;
-    bool allTime;
-    bool specialExecution;
-};
+    void to_json(json& j, const Params& p)
+    {
+        j = json{{"graphType", p.graphType},
+                 {"shape", p.shape},
+                 {"report", p.report},
+                 {"numThreads", p.numThreads},
+                 {"algType", p.algType},
+                 {"structSize", p.structSize},
+                 {"numIterExps", p.numIterExps},
+                 {"stepSpanningType", p.stepSpanningType},
+                 {"directed", p.directed},
+                 {"stealTime", p.stealTime},
+                 {"allTime", p.allTime},
+                 {"specialExecution", p.specialExecution}
+        };
+    };
+
+    void from_json(const json& j, Params& p)
+    {
+        j.at("graphType").get_to(p.graphType);
+        j.at("shape").get_to(p.shape);
+        j.at("report").get_to(p.report);
+        j.at("numThreads").get_to(p.numThreads);
+        j.at("algType").get_to(p.algType);
+        j.at("structSize").get_to(p.structSize);
+        j.at("numIterExps").get_to(p.numIterExps);
+        j.at("stepSpanningType").get_to(p.stepSpanningType);
+        j.at("directed").get_to(p.directed);
+        j.at("stealTime").get_to(p.stealTime);
+        j.at("allTime").get_to(p.allTime);
+        j.at("specialExecution").get_to(p.specialExecution);
+    };
+}
+
 
 struct Report {
-    std::atomic<int> takes = 0;
-    std::atomic<int> puts = 0;
-    std::atomic<int> steals = 0;
-    std::atomic<long long> maxSteal = LLONG_MIN;
-    std::atomic<long long> minSteal = LLONG_MAX;
-    std::atomic<long long> avgSteal = 0;
-    std::atomic<long long> avgIter = 0;
-    long long executionTime; // Maybe it could be change by some type provided in chronno header
-    int numProcessors_;
-    int* processors_;
-    Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
-    void incTakes() { ++takes; }
-    void incPuts() { ++puts; }
-    void incSteals() { ++steals; }
+        std::atomic<int> takes = 0;
+        std::atomic<int> puts = 0;
+        std::atomic<int> steals = 0;
+        std::atomic<long long> maxSteal = LLONG_MIN;
+        std::atomic<long long> minSteal = LLONG_MAX;
+        std::atomic<long long> avgSteal = 0;
+        std::atomic<long long> avgIter = 0;
+        long long executionTime; // Maybe it could be change by some type provided in chronno header
+        int numProcessors_;
+        int* processors_;
+        Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
+        void incTakes() { ++takes; }
+        void incPuts() { ++puts; }
+        void incSteals() { ++steals; }
+    };
 
-};
+// namespace report {
+//     void to_json(json& j, const Report& r)
+//     {
+//         j = json{{"takes", r.takes},
+//                  {"puts", r.puts},
+//                  {"steals", r.steals},
+//                  {"maxSteal", r.maxSteal},
+//                  {"minSteal", r.minSteal},
+//                  {"avgSteal", r.avgSteal},
+//                  {"avgIter", r.avgIter},
+//                  {"executionTime", r.executionTime},
+//                  {"numProcessors_", r.numProcessors},
+//         };
+//     };
+
+//     void from_json(const json& j, Report& r)
+//     {
+//         j.at("takes").get_to(r.takes);
+//         j.at("puts").get_to(r.puts);
+//         j.at("steals").get_to(r.steals);
+//         j.at("maxSteal").get_to(r.maxSteal);
+//         j.at("avgSteal").get_to(r.avgSteal);
+//         j.at("avgIter").get_to(r.avgIter);
+//         j.at("executionTime").get_to(r.executionTime);
+//         j.at("numProcessors").get_to(r.numProcessors_);
+//         j.at("directed").get_to(p.directed);
+//         j.at("stealTime").get_to(p.stealTime);
+//         j.at("allTime").get_to(p.allTime);
+//         j.at("specialExecution").get_to(p.specialExecution);
+//     };
+// }
+
 
 class AbstractStepSpanningTree
 {
@@ -592,7 +662,7 @@ bool isCyclic(graph& g, bool* visited);
 bool hasCycle(graph* g);
 bool isTree(graph& g);
 
-graph spanningTree(graph& g, int* roots, Report& report, Params& params);
+graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params);
 
 GraphCycleType detectCycleType(graph& g);
 
@@ -601,3 +671,13 @@ workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int c
 int* stubSpanning(graph& g, int size);
 
 bool inArray(int val, int* array, int size);
+
+json compare(json properties);
+
+graph graphFactory(GraphType, int shape);
+
+json experiment(ws::Params &params);
+
+json experimentComplete(GraphType type, int shape);
+
+std::unordered_map<AlgorithmType, std::vector<json>> buildLists();
