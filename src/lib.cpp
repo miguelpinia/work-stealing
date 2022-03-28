@@ -1055,6 +1055,7 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
         algs[i] = c;
     }
     std::barrier sync_point(params.numThreads, wait_for_begin);
+    std::cout << getAlgorithmTypeFromEnum(params.algType) << std::endl;
     for (int i = 0; i < params.numThreads; i++) {
         std::function<void(int)> func = [&](int processID) {
             workStealingAlgorithm* alg = algs[processID];
@@ -1255,7 +1256,7 @@ void CounterStepSpanningTree::generalExecution()
             v = algorithm_->take();
             report_.incTakes();
             if (v >= 0) {
-                std::list<int> neighbors = g_.getNeighbours(v);
+                std::list<int>& neighbors = g_.getNeighbours(v);
                 for(auto it = neighbors.begin(); it != neighbors.end(); it++) {
                     w = *it;
                     if (colors_[w].load() == 0) {
@@ -1303,7 +1304,7 @@ void CounterStepSpanningTree::specialExecution()
             v = algorithm_->take(label_ - 1);
             report_.incTakes();
             if (v >= 0) {
-                std::list<int> neighbors = g_.getNeighbours(v);
+                std::list<int>& neighbors = g_.getNeighbours(v);
                 for(auto it = neighbors.begin(); it != neighbors.end(); it++) {
                     w = *it;
                     if (colors_[w].load() == 0) {

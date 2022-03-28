@@ -681,3 +681,5 @@ json experiment(ws::Params &params);
 json experimentComplete(GraphType type, int shape);
 
 std::unordered_map<AlgorithmType, std::vector<json>> buildLists();
+
+std::string getAlgorithmTypeFromEnum(AlgorithmType type);
