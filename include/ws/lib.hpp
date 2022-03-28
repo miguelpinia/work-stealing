@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _LIB_HPP_
+#define _LIB_HPP_
 
 #include <list>
 #include <vector>
@@ -273,7 +275,7 @@ public:
     void expand();
 
     int getSize();
-    void printType() {
+    void printType() override {
         std::cout << "cilk" << std::endl;
     }
 };
@@ -495,90 +497,27 @@ namespace ws {
         bool specialExecution;
     };
 
-    void to_json(json& j, const Params& p)
-    {
-        j = json{{"graphType", p.graphType},
-                 {"shape", p.shape},
-                 {"report", p.report},
-                 {"numThreads", p.numThreads},
-                 {"algType", p.algType},
-                 {"structSize", p.structSize},
-                 {"numIterExps", p.numIterExps},
-                 {"stepSpanningType", p.stepSpanningType},
-                 {"directed", p.directed},
-                 {"stealTime", p.stealTime},
-                 {"allTime", p.allTime},
-                 {"specialExecution", p.specialExecution}
-        };
-    };
-
-    void from_json(const json& j, Params& p)
-    {
-        j.at("graphType").get_to(p.graphType);
-        j.at("shape").get_to(p.shape);
-        j.at("report").get_to(p.report);
-        j.at("numThreads").get_to(p.numThreads);
-        j.at("algType").get_to(p.algType);
-        j.at("structSize").get_to(p.structSize);
-        j.at("numIterExps").get_to(p.numIterExps);
-        j.at("stepSpanningType").get_to(p.stepSpanningType);
-        j.at("directed").get_to(p.directed);
-        j.at("stealTime").get_to(p.stealTime);
-        j.at("allTime").get_to(p.allTime);
-        j.at("specialExecution").get_to(p.specialExecution);
-    };
+    void to_json(json& j, const Params& p);
+    void from_json(const json& j, Params& p);
 }
 
 
 struct Report {
-        std::atomic<int> takes = 0;
-        std::atomic<int> puts = 0;
-        std::atomic<int> steals = 0;
-        std::atomic<long long> maxSteal = LLONG_MIN;
-        std::atomic<long long> minSteal = LLONG_MAX;
-        std::atomic<long long> avgSteal = 0;
-        std::atomic<long long> avgIter = 0;
-        long long executionTime; // Maybe it could be change by some type provided in chronno header
-        int numProcessors_;
-        int* processors_;
-        Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
-        void incTakes() { ++takes; }
-        void incPuts() { ++puts; }
-        void incSteals() { ++steals; }
-    };
-
-// namespace report {
-//     void to_json(json& j, const Report& r)
-//     {
-//         j = json{{"takes", r.takes},
-//                  {"puts", r.puts},
-//                  {"steals", r.steals},
-//                  {"maxSteal", r.maxSteal},
-//                  {"minSteal", r.minSteal},
-//                  {"avgSteal", r.avgSteal},
-//                  {"avgIter", r.avgIter},
-//                  {"executionTime", r.executionTime},
-//                  {"numProcessors_", r.numProcessors},
-//         };
-//     };
-
-//     void from_json(const json& j, Report& r)
-//     {
-//         j.at("takes").get_to(r.takes);
-//         j.at("puts").get_to(r.puts);
-//         j.at("steals").get_to(r.steals);
-//         j.at("maxSteal").get_to(r.maxSteal);
-//         j.at("avgSteal").get_to(r.avgSteal);
-//         j.at("avgIter").get_to(r.avgIter);
-//         j.at("executionTime").get_to(r.executionTime);
-//         j.at("numProcessors").get_to(r.numProcessors_);
-//         j.at("directed").get_to(p.directed);
-//         j.at("stealTime").get_to(p.stealTime);
-//         j.at("allTime").get_to(p.allTime);
-//         j.at("specialExecution").get_to(p.specialExecution);
-//     };
-// }
-
+    std::atomic<int> takes = 0;
+    std::atomic<int> puts = 0;
+    std::atomic<int> steals = 0;
+    std::atomic<long long> maxSteal = LLONG_MIN;
+    std::atomic<long long> minSteal = LLONG_MAX;
+    std::atomic<long long> avgSteal = 0;
+    std::atomic<long long> avgIter = 0;
+    long long executionTime; // Maybe it could be change by some type provided in chronno header
+    int numProcessors_;
+    int* processors_;
+    Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
+    void incTakes() { ++takes; }
+    void incPuts() { ++puts; }
+    void incSteals() { ++steals; }
+};
 
 class AbstractStepSpanningTree
 {
@@ -683,3 +622,4 @@ json experimentComplete(GraphType type, int shape);
 std::unordered_map<AlgorithmType, std::vector<json>> buildLists();
 
 std::string getAlgorithmTypeFromEnum(AlgorithmType type);
+#endif /* _LIB_HPP_ */
