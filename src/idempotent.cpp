@@ -92,6 +92,7 @@ void idempotentFIFO::expand() {
     int t = tail.load();
     for (int i = h; i < t; i++) {
         a.set(i % a.getSize(), tasks.get(i % tasks.getSize()));
+        std::atomic_thread_fence(std::memory_order_release);
     }
     tasks = std::move(a);
     std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -219,8 +220,7 @@ int idempotentDeque::steal() {
         taskArrayWithSize* a = &tasks;
         auto task = a->get(head % a->getSize());
         auto h2 = (head + 1) % a->getSize();
-        std::atomic_thread_fence(std::memory_order_acquire);
-        if (anchor.compare_exchange_strong(oldReference, new triplet(h2, size - 1, tag))) {
+        if (anchor.compare_exchange_strong(oldReference, new triplet(h2, size - 1, tag), std::memory_order_acq_rel)) {
             delete oldReference;
             return task;
         }
@@ -231,12 +231,13 @@ void idempotentDeque::expand() {
     triplet *old = anchor.load();
     auto[head, size, tag] = *old;
     taskArrayWithSize a(2 * tasks.getSize());
+    std::atomic_thread_fence(std::memory_order_release);
     for (int i = 0; i < size; i++) {
         a.set((head + i) % a.getSize(), tasks.get((head + i) % tasks.getSize()));
+        std::atomic_thread_fence(std::memory_order_release);
     }
-    std::atomic_thread_fence(std::memory_order_release);
     tasks = a;
-    std::atomic_thread_fence(std::memory_order_release);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
 }
 
 int idempotentDeque::getSize() {
