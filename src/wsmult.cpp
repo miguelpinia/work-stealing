@@ -82,7 +82,7 @@ bwsncmult::bwsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity
         head[i] = 0;
     }
     for (int i = 0; i < capacity; i++) {
-        tasks[i] = 0;
+        tasks[i] = BOTTOM;
         B[i] = false;
     }
     B[0] = true;
@@ -98,14 +98,14 @@ bool bwsncmult::isEmpty(int label)
 bool bwsncmult::put(int task, int label)
 {
     (void) label;
-    tail++;
-    if (tail == capacity) expand();
+    if (tail == capacity - 1) expand();
     if (tail <= capacity - 3) {
         tasks[tail + 1] = BOTTOM;
         tasks[tail + 2] = BOTTOM;
         B[tail + 1] = true;
         B[tail + 2] = true;
     }
+    tail++;
     tasks[tail] = task;
     return true;
 }
@@ -132,11 +132,9 @@ int bwsncmult::steal(int label)
                 int h = head[label];
                 head[label]++;
                 if (B[h].exchange(false)) {
-                    Head.store(head[label]);
+                    Head.store(h + 1);
                     return x;
                 }
-            } else {
-                return EMPTY;
             }
         } else {
             return EMPTY;
@@ -151,14 +149,9 @@ int bwsncmult::getCapacity() const {
 void bwsncmult::expand() {
     auto newCapacity = 2 * capacity;
     auto newData = new std::atomic<int>[newCapacity];
-    for (int i = 0; i < newCapacity; i++) {
-        newData[i] = BOTTOM;
-    }
-
-    std::atomic<bool>* newState = new std::atomic<bool>[newCapacity];
-    for (int i = 0; i < newCapacity; i++) newState[i] = true;
+    std::fill(newData + capacity, newData + newCapacity, BOTTOM);
+    auto newState = new std::atomic<bool>[newCapacity];
     std::atomic_thread_fence(std::memory_order_release);
-
     for (int i = 0; i < capacity; i++) {
         newData[i] = tasks[i].load();
         newState[i] = B[i].load();

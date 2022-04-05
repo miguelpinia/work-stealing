@@ -564,6 +564,17 @@ public:
 template<typename ... Args>
 std::string string_format( const std::string& format, Args ... args );
 
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args )
+{
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>( size_s );
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
 int pickRandomThread(int numThreads, int processor);
 
 class CounterStepSpanningTree : public AbstractStepSpanningTree
@@ -603,7 +614,7 @@ graph torus3D(int shape);
 graph torus3D40(int shape);
 graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bool directed);
 
-bool isCyclic(graph& g, bool* visited);
+bool isCyclic(graph& g, std::unique_ptr<bool[]>& visited);
 bool hasCycle(graph* g);
 bool isTree(graph& g);
 
@@ -621,7 +632,7 @@ json compare(json properties);
 
 graph graphFactory(GraphType, int shape);
 
-json experiment(ws::Params &params);
+json experiment(ws::Params &params, graph &g);
 
 json experimentComplete(GraphType type, int shape);
 

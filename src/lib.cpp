@@ -18,7 +18,7 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
     std::atomic<int>* parents = new std::atomic<int>[g.getNumberVertices()];
     std::atomic<int>* visited = new std::atomic<int>[g.getNumberVertices()];
     for (int i = 0; i < g.getNumberVertices(); i++) {
-        colors[i] = 0; parents[i] = -1; visited[i] = 0;
+        colors[i] = 0; parents[i] = BOTTOM; visited[i] = 0;
     }
 
     workStealingAlgorithm* algs[params.numThreads];
@@ -65,14 +65,15 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
     report.executionTime = duration;
     for (int i = 0; i < g.getNumberVertices(); i++) {
         if (colors[i].load() != 0) {
-            processors[colors[i].load() - 1]++; // because i == 0 doesnt have parent.
+            processors[colors[i].load() - 1]++; // because we labeled processors from 1..n
         }
     }
     report.processors_ = processors;
-    parents[roots[0]] = -1; // ensures that first node is always the root of the tree
+    parents[roots[0]] = BOTTOM; // ensures that first node is always the root of the tree
     for (int i = 1; i < params.numThreads; i++) {
         parents[roots[i]].store(roots[i - 1]);
     }
+    std::cout << string_format("Se procesaron: %d vertices", counter.load()) << std::endl;
     graph newGraph = buildFromParents(parents, g.getNumberVertices(), roots[0], g.isDirected());
     delete[] colors;
     delete[] parents;
@@ -93,9 +94,7 @@ void CounterStepSpanningTree::generalExecution()
 {
     colors_[root_].store(label_);
     algorithm_->put(root_);
-    // algorithm_->printType();
-    int x = visited_[root_].exchange(1);
-    if (x == 0) {
+    if (visited_[root_].exchange(1) == 0) {
         counter_++;
     }
     report_.incPuts();
@@ -112,8 +111,7 @@ void CounterStepSpanningTree::generalExecution()
                         colors_[w].store(label_);
                         parents_[w].store(v);
                         algorithm_->put(w);
-                        x = visited_[w].exchange(1);
-                        if (x == 0) {
+                        if (visited_[w].exchange(1) == 0) {
                             counter_++;
                         }
                         report_.incPuts();
@@ -131,7 +129,6 @@ void CounterStepSpanningTree::generalExecution()
             }
         }
     } while(counter_.load() < g_.getNumberVertices());
-
 }
 
 
@@ -142,8 +139,7 @@ void CounterStepSpanningTree::specialExecution()
     // label_ - 1
     colors_[root_].store(label_);
     algorithm_->put(root_, label_ - 1);
-    int x = visited_[root_].exchange(1);
-    if (x == 0) {
+    if (visited_[root_].exchange(1) == 0) {
         counter_++;
     }
     report_.incPuts();
@@ -160,8 +156,7 @@ void CounterStepSpanningTree::specialExecution()
                         colors_[w].store(label_);
                         parents_[w].store(v);
                         algorithm_->put(w, label_ - 1);
-                        x = visited_[w].exchange(1);
-                        if (x == 0) {
+                        if (visited_[w].exchange(1) == 0) {
                             counter_++;
                         }
                         report_.incPuts();
@@ -170,7 +165,7 @@ void CounterStepSpanningTree::specialExecution()
             }
         }
         if (numThreads_ > 1) {
-            thread = pickRandomThread(numThreads_, label_ -1);
+            thread = pickRandomThread(numThreads_, label_ - 1);
             stolenItem = algorithms_[thread]->steal(label_ - 1);
             report_.incSteals();
             if (stolenItem >= 0) {
@@ -223,9 +218,15 @@ std::string getAlgorithmTypeFromEnum(AlgorithmType type)
     return "UNKNOWN";
 }
 
-json experiment(ws::Params &params)
+void print(std::list<int> const &list)
 {
-    graph g = graphFactory(params.graphType, params.shape);
+    std::copy(list.begin(),
+              list.end(),
+              std::ostream_iterator<int>(std::cout, "\n\n"));
+}
+
+json experiment(ws::Params &params, graph& g)
+{
     int* processors = new int[params.numThreads];
     Report r{params.numThreads, processors};
     int* roots = stubSpanning(g, params.numThreads);
@@ -259,13 +260,11 @@ int calculateStructSize(GraphType type, int shape) {
 
 }
 
-bool isEspecial(AlgorithmType type)
+bool isSpecial(AlgorithmType type)
 {
     switch(type) {
     case AlgorithmType::WS_NC_MULT_OPT:
-    // case AlgorithmType::WS_NC_MULT_LA_OPT:
     case AlgorithmType::B_WS_NC_MULT_OPT:
-    // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
         return true;
     default:
         return false;
@@ -278,20 +277,21 @@ json experimentComplete(GraphType type, int shape)
     json last;
     std::unordered_map<AlgorithmType, std::vector<json>> data = buildLists();
     std::vector<json> values;
+    graph g = graphFactory(type, shape);
     for (int i = 0; i < numProcessors; i++) {
+        std::cout << string_format("Iteración: %d\n", i);
         int structSize = calculateStructSize(type, shape);
         for (int at = AlgorithmType::CHASELEV; at != AlgorithmType::LAST; at++) {
             AlgorithmType atype = static_cast<AlgorithmType>(at);
-            bool special = isEspecial(atype);
+            bool special = isSpecial(atype);
             ws::Params p{type, shape, false,
-                (i+ 1), atype, structSize, 10, StepSpanningTreeType::COUNTER,
+                (i + 1), atype, structSize, 10, StepSpanningTreeType::COUNTER,
                 false, false, false, special};
-            json result = experiment(p);
+            json result = experiment(p, g);
             data[atype].emplace_back(result);
             values.emplace_back(result);
         }
     }
-    // std::cout << std::setw(4) << values << std::endl;
     last["values"] = values;
     return last;
 }

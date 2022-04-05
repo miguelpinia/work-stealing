@@ -1,6 +1,7 @@
 #include "ws/lib.hpp"
 #include <random>
 #include <queue>
+#include <cmath>
 
 ////////////////////
 // Util functions //
@@ -20,10 +21,10 @@ graph torus2D(int shape)
     int neighbor;
     int i, j, currentIdx, pos;
     for(int k = 0; k < numEdges; k++) {
-        j = (k / 4) % shape;
-        i = k / (shape * 4);
+        j = mod(std::round(k / 4), shape);
+        i = std::round(k / (shape * 4));
         currentIdx = (i * shape) + j;
-        pos = k % 4;
+        pos = mod(k, 4);
         switch(pos) {
         case 0:
             neighbor = mod((i - 1), shape) * shape + j;
@@ -49,18 +50,17 @@ graph torus2D_60(int shape)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(1, shape);
+    std::uniform_int_distribution<> distrib(0, 99);
     bool directed = false;
     int numVertices = shape * shape;
     int numEdges = numVertices * 4;
     graph g(directed, 0, numVertices, GraphType::TORUS_2D_60);
-    int randomNumber, i, j, currentIdx, pos;
-    int neighbor;
+    int randomNumber, i, j, currentIdx, pos, neighbor;
     for (int k = 0; k < numEdges; k++) {
-        i = k / (shape * 4);
-        j = (k / 4) % shape;
+        j = mod(std::round(k / 4), shape);
+        i = std::round(k / (shape * 4));
         currentIdx = (i * shape) + j;
-        pos = k % 4;
+        pos = mod(k, 4);
         randomNumber = distrib(gen);
         switch(pos) {
         case 0:
@@ -68,19 +68,19 @@ graph torus2D_60(int shape)
             g.addEdge(currentIdx, neighbor);
             break;
         case 1:
-            if (randomNumber <= 60) {
+            if (randomNumber < 60) {
                 neighbor = i * shape + mod((j + 1), shape);
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 2:
-            if (randomNumber <= 60) {
+            if (randomNumber < 60) {
                 neighbor = mod((i + 1), shape) * shape + j;
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 3:
-            if (randomNumber <= 60) {
+            if (randomNumber < 60) {
                 neighbor = i * shape + mod((j - 1), shape);
                 g.addEdge(currentIdx, neighbor);
             }
@@ -99,11 +99,11 @@ graph torus3D(int shape)
     graph g(directed, 0, numVertices, GraphType::TORUS_3D);
     int i, j, k, currentIdx, pos, neighbor;
     for (int m = 0; m < numEdges; m++) {
-        k = (m / 6) % shape;
-        j = (m / (shape * 6)) % shape;
-        i = (m / (shape * shape * 6)) % shape;
+        k = mod(std::round(m / 6), shape);
+        j = mod(std::round(m / (shape * 6)), shape);
+        i = mod(std::round(m / (shape * shape * 6)), shape);
         currentIdx = (i * shape * shape) + (j * shape) + k;
-        pos = m % 6;
+        pos = mod(m, 6);
         switch(pos) {
         case 0:
             neighbor = (i * shape * shape) + (j * shape) + mod((k - 1), shape);
@@ -135,51 +135,52 @@ graph torus3D40(int shape)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(1, shape);
+    std::uniform_int_distribution<> distrib(0, 99);
     bool directed = false;
     int numVertices = shape * shape * shape;
     int numEdges = numVertices * 6;
     graph g(directed, 0, numVertices, GraphType::TORUS_3D_40);
     int i, j, k, currentIdx, pos, neighbor, randomNum;
     for (int m = 0; m < numEdges; m++) {
-        k = (m/6) % shape;
-        j = (m / (shape * 6)) % shape;
-        i = (m / (shape * shape * 6)) % shape;
+        k = mod(std::round(m / 6), shape);
+        j = mod(std::round(m / (shape * 6)), shape);
+        i = mod(std::round(m / (shape * shape * 6)), shape);
         currentIdx = (i * shape * shape) + (j * shape) + k;
-        pos = m % 6;
+        pos = mod(m, 6);
         randomNum = distrib(gen);
         switch (pos) {
         case 0:
-            neighbor = (i * shape * shape) + (j * shape) + mod(k - 1, shape);
+            neighbor = (i * shape * shape) + (j * shape) + mod((k - 1), shape);
             g.addEdge(currentIdx, neighbor);
             break;
         case 1:
-            if (randomNum <= 40) {
-                neighbor = (i * shape * shape) + (j * shape) + mod(k + 1, shape);
+            if (randomNum < 40) {
+                neighbor = (i * shape * shape) + (j * shape) + mod((k + 1), shape);
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 2:
-            if (randomNum <= 40) {
-                neighbor = (i * shape * shape) + mod(j - 1, shape) * shape + k;
+            if (randomNum < 40) {
+                neighbor = (i * shape * shape) + mod((j - 1), shape) * shape + k;
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 3:
-            if (randomNum <= 40) {
-                neighbor = (i * shape * shape) + mod(j + 1, shape) * shape + k;
+            if (randomNum < 40) {
+                neighbor = (i * shape * shape) + mod((j + 1), shape) * shape + k;
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 4:
-            if (randomNum <= 40) {
-                neighbor = (mod(i - 1, shape) * shape * shape) + (j * shape) + k;
+            if (randomNum < 40) {
+                neighbor = (mod((i - 1), shape) * shape * shape) + (j * shape) + k;
                 g.addEdge(currentIdx, neighbor);
             }
             break;
         case 5:
-            if (randomNum <= 40) {
-                neighbor = (mod(i + 1, shape) * shape * shape) + (j * shape) + k;
+            if (randomNum < 40) {
+                neighbor = (mod((i + 1), shape) * shape * shape) + (j * shape) + k;
+                g.addEdge(currentIdx, neighbor);
             }
             break;
         default:
@@ -256,10 +257,11 @@ graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bo
 }
 
 
-bool isCyclic(graph& g, bool* visited)
+bool isCyclic(graph& g, std::unique_ptr<bool[]>& visited)
 {
     int root = g.getRoot();
-    int* parents = new int[g.getNumberVertices()];
+    std::unique_ptr<int[]> parents = std::make_unique<int[]>(g.getNumberVertices());
+    std::fill(parents.get(), parents.get() + g.getNumberVertices(), BOTTOM);
     std::queue<int> q;
     visited[root] = true;
     q.push(root);
@@ -267,15 +269,13 @@ bool isCyclic(graph& g, bool* visited)
     if (g.isDirected()) {
         while(!q.empty()) {
             u = q.front(); q.pop();
-            std::list<int> children = g.getChildren(u);
-            for(auto it = children.begin(); it != children.end(); it++) {
-                int v = *it;
+            std::list<int>& children = g.getChildren(u);
+            for(auto const& v : children) {
                 if (!visited[v]) {
                     visited[v] = true;
                     q.push(v);
                     parents[v] = u;
                 } else if (parents[u] != v) {
-                    delete[] parents;
                     return true;
                 }
             }
@@ -283,71 +283,61 @@ bool isCyclic(graph& g, bool* visited)
     } else {
         while (!q.empty()) {
             u = q.front(); q.pop();
-            std::list<int> neighbours = g.getNeighbours(u);
-            for(auto it = neighbours.begin(); it != neighbours.end(); it++) {
-                int v = *it;
+            std::list<int>& neighbours = g.getNeighbours(u);
+            for(auto const& v : neighbours) {
                 if (!visited[v]) {
                     visited[v] = true;
                     q.push(v);
                     parents[v] = u;
                 } else if (parents[u] != v) {
-                    delete[] parents;
                     return true;
                 }
             }
         }
     }
-    delete[] parents;
     return false;
 }
 
 bool hasCycle(graph& g)
 {
     int numVertices = g.getNumberVertices();
-    bool* visited = new bool[numVertices];
-    std::fill(visited, visited + numVertices, false);
+    std::unique_ptr<bool[]> visited = std::make_unique<bool[]>(numVertices);
+    std::fill(visited.get(), visited.get() + numVertices, false);
     bool cycle = isCyclic(g, visited);
-    delete[] visited;
     return cycle;
 }
 
 bool isTree(graph& g)
 {
     int numVertices = g.getNumberVertices();
-    bool* visited = new bool[numVertices];
-    std::fill(visited, visited + numVertices, false);
+    std::unique_ptr<bool[]> visited = std::make_unique<bool[]>(numVertices);
+    std::fill(visited.get(), visited.get() + numVertices, false);
     bool gHasCycle = isCyclic(g, visited);
     if (gHasCycle) {
-        delete[] visited;
         return false;
     }
     for (int u = 0; u < numVertices; u++) {
        if (u != g.getRoot() && !visited[u]) {
-           delete[] visited;
            return false;
        }
     }
-    delete[] visited;
     return true;
 }
 
 GraphCycleType detectCycleType(graph& g)
 {
     int numVertices = g.getNumberVertices();
-    bool* visited = new bool[numVertices];
-    std::fill(visited, visited + numVertices, false);
+    std::unique_ptr<bool[]> visited = std::make_unique<bool[]>(numVertices);
+    std::fill(visited.get(), visited.get() + numVertices, false);
     bool gHasCycle = isCyclic(g, visited);
     if (gHasCycle) {
-        delete[] visited;
         return GraphCycleType::CYCLE;
     }
     auto const check = [](bool x) { return x == true; };
-    auto all = std::all_of(visited, visited + numVertices, check);
+    auto all = std::all_of(visited.get(), visited.get() + numVertices, check);
     if (!all) {
-        delete[] visited;
         return GraphCycleType::DISCONNECTED;
     }
-    delete[] visited;
     return GraphCycleType::TREE;
 }
 

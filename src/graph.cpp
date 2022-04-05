@@ -29,31 +29,25 @@ std::list<int> &vertex::getChildren() {
 }
 
 void vertex::addNeighbour(int neighbour) {
-    neighbours_.push_back(neighbour);
+    if (std::find(neighbours_.begin(), neighbours_.end(), neighbour) != neighbours_.end()) return;
+    neighbours_.emplace_back(neighbour);
 }
 
 void vertex::deleteNeighbour(int neighbour) {
-    bool toDelete = false;
-    auto itr = neighbours_.begin();
-    for (; itr != neighbours_.end(); itr++) {
-        if (*itr == neighbour) {
-            toDelete = true;
-            break;
-        }
-    }
-    if (toDelete) neighbours_.erase(itr);
+    auto itr = std::find(neighbours_.begin(), neighbours_.end(), neighbour);
+    if (itr != neighbours_.end()) neighbours_.erase(itr);
 }
 
 void vertex::addChild(int child) {
-    children_.push_back(child);
+    if (!directed) return;
+    if (std::find(children_.begin(), children_.end(), child) != children_.end()) return;
+    children_.emplace_back(child);
 }
 
 void vertex::deleteChild(int child) {
-    auto itr = children_.begin();
-    for (; itr != children_.end(); itr++) {
-        if (*itr == child) break;
-    }
-    children_.erase(itr);
+    if (!directed) return;
+    auto itr = std::find(children_.begin(), children_.end(), child);
+    if (itr != children_.end()) children_.erase(itr);
 }
 
 /////////////////////////
@@ -91,7 +85,7 @@ graph::graph(bool directed, int root, int numVertices, GraphType type) : directe
 }
 
 void graph::addEdge(int src, int dest) {
-    if (dest == -1) return;
+    if (dest < 0) return;
     vertices[src].addNeighbour(dest);
     numEdges++;
     if (directed) {
