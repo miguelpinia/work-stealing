@@ -11,6 +11,10 @@
 #include <thread>
 #include <barrier>
 #include <iostream>
+#include <cassert>
+#include <memory>
+#include <string>
+#include <stdexcept>
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -25,6 +29,12 @@ int suma(int a, int b);
 static const int EMPTY = -1;
 static const int BOTTOM = -2;
 static const int TOP = -3;
+
+static constexpr std::memory_order relaxed = std::memory_order_relaxed;
+static constexpr std::memory_order consume = std::memory_order_consume;
+static constexpr std::memory_order acquire = std::memory_order_acquire;
+static constexpr std::memory_order release = std::memory_order_release;
+static constexpr std::memory_order seq_cst = std::memory_order_seq_cst;
 
 
 ///////////
@@ -45,9 +55,9 @@ enum AlgorithmType {
     // SIMPLE,  // No work-stealing algorithm
     CHASELEV, // Chase-Lev work-stealing algorithm
     CILK,  // Cilk THE work-stealing algorithm
-    IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
-    IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
     IDEMPOTENT_FIFO,  // Idempotent work-stealing first-in first-out
+    IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
+    IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
     WS_NC_MULT_OPT,   // Work-stealing with multiplicity optimized ("infinite array")
     // WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
     B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
@@ -166,26 +176,24 @@ public:
 //////////////////////////////
 
 class taskArrayWithSize {
+public:
+    enum class error_code{bad_size = -1, bad_index = -2};
 private:
     int size;
-    std::unique_ptr<int[]> array;
+    std::atomic<int>* array;
 public:
     taskArrayWithSize();
     explicit taskArrayWithSize(int size);
     taskArrayWithSize(int size, int defaultValue);
     taskArrayWithSize(const taskArrayWithSize& other);
-    taskArrayWithSize& operator=( const taskArrayWithSize& other )
-    {
-        size = other.size;
-        auto newArray = new int[other.size];
-        for (int i = 0; i < other.size; i++) newArray[i] = other.array[i];
-        array.reset(newArray);
-        return *this;
-    }
+    taskArrayWithSize(taskArrayWithSize &&other);
 
+    taskArrayWithSize& operator=( const taskArrayWithSize& other );
+    taskArrayWithSize& operator=(taskArrayWithSize &&other);
+    ~taskArrayWithSize();
     int &getSize();
 
-    int &get(int position);
+    int get(int position);
 
     void set(int position, int value);
 };
@@ -232,7 +240,7 @@ class chaselev : public workStealingAlgorithm {
 private:
     std::atomic<int> H;
     std::atomic<int> T;
-    std::atomic<int> tasksSize;
+    int tasksSize;
     std::atomic<int> *tasks = nullptr;
 public:
     explicit chaselev(int initialSize);
@@ -258,7 +266,7 @@ class cilk : public workStealingAlgorithm {
 private:
     std::atomic<int> H;
     std::atomic<int> T;
-    std::atomic<int> tasksSize;
+    int tasksSize;
     std::atomic<int> *tasks = nullptr;
     std::mutex mtx;
 public:
@@ -309,15 +317,14 @@ public:
 struct pair {
     int t;
     int g;
-
-    pair(int t, int g) : t(t), g(g) {};
 };
 
 class idempotentLIFO : public workStealingAlgorithm {
 private:
-    std::unique_ptr<int[]> tasks;
+    taskArrayWithSize tasks;
     int capacity;
-    std::atomic<pair *> anchor;
+    pair p = {0, 0};
+    std::atomic_ref<pair> anchor{p};
 public:
     explicit idempotentLIFO(int size);
 
@@ -331,7 +338,7 @@ public:
 
     void expand();
 
-    int getSize() const;
+    int getSize();
     void printType() {
         std::cout << "idempotent LIFO" << std::endl;
     }
@@ -342,15 +349,14 @@ struct triplet {
     int head;
     int size;
     int tag;
-
-    triplet(int, int, int);
 };
 
 class idempotentDeque : public workStealingAlgorithm {
 private:
     int capacity;
     taskArrayWithSize tasks;
-    std::atomic<triplet *> anchor;
+    triplet* tp = new triplet{0,0,0};
+    std::atomic_ref<triplet*> anchor{tp};
 public:
     explicit idempotentDeque(int size);
 
