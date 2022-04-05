@@ -71,7 +71,7 @@ TEST_F(VertexTest, tessDeleteNeighbour) {
 }
 
 TEST_F(VertexTest, testAddChild) {
-    vertex v;
+    vertex v(true, 0);
     std::list<int> children = {1, 2, 3, 4, 8, 9};
     std::list<int> expected = {1, 2, 3, 4, 8, 9, 10};
 
@@ -87,7 +87,7 @@ TEST_F(VertexTest, testAddChild) {
 }
 
 TEST_F(VertexTest, testDeleteChild) {
-    vertex v;
+    vertex v(true, 0);
     std::list<int> children = {1, 2, 3, 4, 8, 9, 10};
     std::list<int> expected = {1, 2, 3, 4, 9, 10};
 
@@ -244,10 +244,6 @@ TEST_F(GraphTest, testTorus2D) {
             i * shape + mod((j + 1), shape),
             mod((i + 1), shape) * shape + j,
             i * shape + mod((j - 1), shape),
-            mod((i - 1), shape) * shape + j,
-            i * shape + mod((j + 1), shape),
-            mod((i + 1), shape) * shape + j,
-            i * shape + mod((j - 1), shape),
         };
         EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(k)));
     }
@@ -263,10 +259,6 @@ TEST_F(GraphTest, testTorus2D60) {
         int i = k / shape;
         int j = k % shape;
         std::list<int> l = {
-            mod((i - 1), shape) * shape + j,
-            i * shape + mod((j + 1), shape),
-            mod((i + 1), shape) * shape + j,
-            i * shape + mod((j - 1), shape),
             mod((i - 1), shape) * shape + j,
             i * shape + mod((j + 1), shape),
             mod((i + 1), shape) * shape + j,
@@ -296,12 +288,6 @@ TEST_F(GraphTest, testTorus3D) {
             (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
             (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
             (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
-            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
-            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
-            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
-            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
-            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
-            (mod((i + 1), shape) * shape * shape) + (j * shape) + k
         };
         EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(m)));
     }
@@ -326,12 +312,6 @@ TEST_F(GraphTest, testTorus3D40) {
             (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
             (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
             (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
-            (i * shape * shape) + (j * shape) + mod((k - 1), shape),
-            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
-            (i * shape * shape) + (mod((j - 1), shape) * shape) + k,
-            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
-            (mod((i - 1), shape) * shape * shape) + (j * shape) + k,
-            (mod((i + 1), shape) * shape * shape) + (j * shape) + k
         };
         EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(m)));
     }
@@ -370,7 +350,7 @@ TEST_F(TaskArrayTest, testSet) {
 
 TEST_F(TaskArrayTest, testGet) {
     taskArrayWithSize array(10);
-    EXPECT_EQ(-1, array.get(0));
+    EXPECT_EQ(BOTTOM, array.get(0));
     array.set(0, 10101);
     EXPECT_EQ(10101, array.get(0));
 }
@@ -912,7 +892,7 @@ TEST_F(STTest, spanningTreeWSNCTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -930,7 +910,7 @@ TEST_F(STTest, spanningTreeChaseLevTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -948,7 +928,7 @@ TEST_F(STTest, spanningTreeCilkTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -966,7 +946,7 @@ TEST_F(STTest, spanningTreeIdemFIFOTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -984,7 +964,7 @@ TEST_F(STTest, spanningTreeIdemDequeTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -1002,7 +982,7 @@ TEST_F(STTest, spanningTreeIdemLIFOTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
 }
 
@@ -1020,7 +1000,7 @@ TEST_F(STTest, spanningTreeBWSNCTest)
     graph result = spanningTree(g, roots, r, p);
     GraphCycleType type = detectCycleType(result);
     std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p);
+    experiment(p, g);
     // json j = {{"VERTEX_SIZE", 10}, {"STRUCT_SIZE", 100}};
     // compare(j);
     EXPECT_EQ(GraphCycleType::TREE, type);
