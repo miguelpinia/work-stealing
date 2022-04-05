@@ -12,9 +12,7 @@ chaselev::chaselev(int initialSize) {
     T = 0;
     tasksSize = initialSize;
     tasks = new std::atomic<int>[initialSize];
-    for (int i = 0; i < initialSize; i++) {
-        tasks[i] = 0;
-    }
+    std::fill(tasks, tasks + initialSize, BOTTOM);
 }
 
 bool chaselev::isEmpty() {
@@ -24,24 +22,23 @@ bool chaselev::isEmpty() {
 }
 
 void chaselev::expand() {
-    int newSize = 2 * tasksSize.load();
+    int newSize = 2 * tasksSize;
     auto *newData = new std::atomic<int>[newSize];
-    for (int i = 0; i < tasksSize; i++) {
-        newData[i] = tasks[i].load();
-    }
-    for (int i = tasksSize; i < newSize; i++) {
-        newData[i] = 0;
-    }
+    for (int i = 0; i < tasksSize; i++) newData[i] = tasks[i].load();
     std::atomic<int> *tmp = tasks;
     tasks = newData;
     delete[] tmp;
-    tasksSize.store(newSize);
+    tasksSize = newSize;
 }
 
 bool chaselev::put(int task) {
     int tail = T.load();
-    if (tail >= tasksSize) expand();
-    tasks[tail % tasksSize] = task;
+    if (tail == tasksSize) {
+        expand();
+        return put(task);
+    }
+    tasks[mod(tail, tasksSize)] = task;
+    std::atomic_thread_fence(seq_cst);
     T.store(tail + 1);
     return true;
 }
@@ -52,32 +49,31 @@ int chaselev::take() {
     // In C++, the language doesn't have support for StoreLoad
     // fence. But using atomic thread fence with memory_order_seq_cst,
     // it's possible that compiler would add MFENCE fence.
-    std::atomic_thread_fence(std::memory_order_seq_cst);
+    std::atomic_thread_fence(seq_cst);
     int h = H.load();
-    if (tail > h) {
-        return tasks[tail % tasksSize];
-    }
+    if (tail > h) return tasks[mod(tail, tasksSize)];
     if (tail < h) {
         T.store(h);
         return EMPTY;
     }
     T.store(h + 1);
-    if (!H.compare_exchange_strong(h, h + 1)) {
+    if (!H.compare_exchange_strong(h, h + 1, seq_cst, relaxed)) {
         return EMPTY;
     } else {
-        return tasks[tail % tasksSize];
+        return tasks[mod(tail, tasksSize)];
     }
 }
 
 int chaselev::steal() {
     while (true) {
         int h = H.load();
+        std::atomic_thread_fence(seq_cst);
         int t = T.load();
-        if (h >= t) {
-            return EMPTY;
+        if (h >= t) return EMPTY;
+        int task = tasks[mod(h, tasksSize)];
+        if (!H.compare_exchange_strong(h, h + 1, seq_cst, relaxed)) {
+            continue;
         }
-        int task = tasks[h % tasksSize];
-        if (!H.compare_exchange_strong(h, h + 1)) continue;
         return task;
     }
 }
