@@ -9,9 +9,7 @@ cilk::cilk(int initialSize) {
     T = 0;
     tasksSize = initialSize;
     tasks = new std::atomic<int>[initialSize];
-    for (int i = 0; i < initialSize; i++) {
-        tasks[i] = 0;
-    }
+    std::fill(tasks, tasks + initialSize, BOTTOM);
 }
 
 bool cilk::isEmpty() {
@@ -21,18 +19,13 @@ bool cilk::isEmpty() {
 }
 
 void cilk::expand() {
-    int newSize = 2 * tasksSize.load();
+    int newSize = 2 * tasksSize;
     auto *newData = new std::atomic<int>[newSize];
-    for (int i = 0; i < tasksSize; i++) {
-        newData[i] = tasks[i].load();
-    }
-    for (int i = tasksSize; i < newSize; i++) {
-        newData[i] = 0;
-    }
+    for (int i = 0; i < tasksSize; i++) newData[i] = tasks[i].load();
     std::atomic<int> *tmp = tasks;
     tasks = newData;
     delete[] tmp;
-    tasksSize.store(newSize);
+    tasksSize = newSize;
 }
 
 int cilk::getSize() {
@@ -40,45 +33,45 @@ int cilk::getSize() {
 }
 
 bool cilk::put(int task) {
-    int tail = T.load();
-    if (tail >= tasksSize) expand();
-    tasks[tail % tasksSize] = task;
-    T.store(tail + 1);
+    int tail = T.load(relaxed);
+    if (tail == tasksSize) {
+        expand();
+        return put(task);
+    }
+    tasks[mod(tail, tasksSize)] = task;
+    std::atomic_thread_fence(std::memory_order_release);
+    T.store(tail + 1, relaxed);
     return true;
 }
 
 int cilk::take() {
-    int tail = T.load() - 1;
-    T.store(tail);
+    int tail = T.load(relaxed) - 1;
+    T.store(tail, relaxed);
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    int head = H.load();
-    if (tail >= head) {
-        return tasks[tail % tasksSize];
-    }
+    int head = H.load(relaxed);
+
+    if (tail > head) return tasks[mod(tail, tasksSize)];
     if (tail < head) {
-        mtx.lock();
+        const std::lock_guard<std::mutex> lock(mtx);
         if (H.load() >= (tail + 1)) {
-            T.store(tail + 1);
-            mtx.unlock();
+            T.store(tail + 1, relaxed);
             return EMPTY;
         }
-        mtx.unlock();
     }
-    return tasks[tail % tasksSize];
+    return tasks[mod(tail, tasksSize)];
 }
 
 int cilk::steal() {
-    mtx.lock();
-    int h = H.load();
-    H.store(h + 1);
-    std::atomic_thread_fence(std::memory_order_seq_cst);
     int ret;
-    if ((h + 1) <= T.load()) {
-        ret = tasks[h % tasksSize];
+    const std::lock_guard<std::mutex> lock(mtx);
+    int h = H.load(relaxed);
+    H.store(h + 1, relaxed);
+    std::atomic_thread_fence(seq_cst);
+    if ((h + 1) <= T.load(acquire)) {
+        ret = tasks[mod(h, tasksSize)];
     } else {
-        H.store(h);
+        H.store(h, relaxed);
         ret = EMPTY;
     }
-    mtx.unlock();
     return ret;
 }
