@@ -634,11 +634,11 @@ bool inArray(int val, int* array, int size);
 
 json compare(json properties);
 
-graph graphFactory(GraphType, int shape);
+graph graphFactory(GraphType, int shape, bool directed);
 
 json experiment(ws::Params &params, graph &g);
 
-json experimentComplete(GraphType type, int shape);
+json experimentComplete(GraphType type, int shape, bool directed);
 
 std::unordered_map<AlgorithmType, std::vector<json>> buildLists();
 

@@ -361,17 +361,17 @@ workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int c
     return new workStealingAlgorithm();
 }
 
-graph graphFactory(GraphType type, int shape)
+graph graphFactory(GraphType type, int shape, bool directed)
 {
     switch(type) {
     case GraphType::TORUS_2D:
-        return torus2D(shape);
+        return directed ? directedTorus2D(shape) : torus2D(shape);
     case GraphType::TORUS_2D_60:
-        return torus2D60(shape);
+        return directed ? directedTorus2D60(shape) : torus2D60(shape);
     case GraphType::TORUS_3D:
-        return torus3D(shape);
+        return directed ? directedTorus3D(shape) : torus3D(shape);
     case GraphType::TORUS_3D_40:
-        return torus3D40(shape);
+        return directed ? directedTorus3D40(shape) : torus3D40(shape);
     case GraphType::RANDOM:
     case GraphType::KGRAPH:
     default:

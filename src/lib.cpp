@@ -271,13 +271,13 @@ bool isSpecial(AlgorithmType type)
     }
 }
 
-json experimentComplete(GraphType type, int shape)
+json experimentComplete(GraphType type, int shape, bool directed)
 {
     const int numProcessors = std::thread::hardware_concurrency();
     json last;
     std::unordered_map<AlgorithmType, std::vector<json>> data = buildLists();
     std::vector<json> values;
-    graph g = graphFactory(type, shape);
+    graph g = graphFactory(type, shape, directed);
     for (int i = 0; i < numProcessors; i++) {
         std::cout << string_format("Iteración: %d\n", i);
         int structSize = calculateStructSize(type, shape);

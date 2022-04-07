@@ -400,12 +400,82 @@ TEST_F(GraphTest, testDirectedTorus3D40) {
 
 TEST_F(GraphTest, graphFactoryTorus2DTest) {
     GraphType type = GraphType::TORUS_2D;
-    int shape = 100;
-    graph g = graphFactory(type, shape);
+    int shape = 10;
+    graph g = graphFactory(type, shape, false);
     EXPECT_EQ(type, g.getType());
     EXPECT_EQ(shape * shape, g.getNumberVertices());
     EXPECT_EQ(shape * shape * 8, g.getNumberEdges());
+    EXPECT_EQ(false, g.isDirected());
 }
+
+
+TEST_F(GraphTest, graphFactoryDirectedTorus2DTest) {
+    GraphType type = GraphType::TORUS_2D;
+    int shape = 10;
+    graph g = graphFactory(type, shape, true);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape, g.getNumberVertices());
+    EXPECT_EQ(shape * shape * 2, g.getNumberEdges());
+    EXPECT_EQ(true, g.isDirected());
+}
+
+TEST_F(GraphTest, graphFactoryTorus2D60Test) {
+    GraphType type = GraphType::TORUS_2D_60;
+    int shape = 10;
+    graph g = graphFactory(type, shape, false);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape, g.getNumberVertices());
+    EXPECT_EQ(false, g.isDirected());
+}
+
+TEST_F(GraphTest, graphFactoryDirectedTorus2D60Test) {
+    GraphType type = GraphType::TORUS_2D_60;
+    int shape = 10;
+    graph g = graphFactory(type, shape, true);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape, g.getNumberVertices());
+    EXPECT_EQ(true, g.isDirected());
+}
+
+TEST_F(GraphTest, graphFactoryTorus3DTest) {
+    GraphType type = GraphType::TORUS_3D;
+    int shape = 10;
+    graph g = graphFactory(type, shape, false);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape * shape, g.getNumberVertices());
+    EXPECT_EQ(shape * shape * shape * 12, g.getNumberEdges());
+    EXPECT_EQ(false, g.isDirected());
+}
+
+TEST_F(GraphTest, graphFactoryDirectedTorus3DTest) {
+    GraphType type = GraphType::TORUS_3D;
+    int shape = 10;
+    graph g = graphFactory(type, shape, true);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape * shape, g.getNumberVertices());
+    EXPECT_EQ(shape * shape * shape * 3, g.getNumberEdges());
+    EXPECT_EQ(true, g.isDirected());
+}
+
+
+TEST_F(GraphTest, graphFactoryTorus3D40Test) {
+    GraphType type = GraphType::TORUS_3D_40;
+    int shape = 10;
+    graph g = graphFactory(type, shape, false);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape * shape, g.getNumberVertices());
+    EXPECT_EQ(false, g.isDirected());
+}
+
+TEST_F(GraphTest, graphFactoryDirectedTorus3D40Test) {
+    GraphType type = GraphType::TORUS_3D_40;
+    int shape = 10;
+    graph g = graphFactory(type, shape, true);
+    EXPECT_EQ(type, g.getType());
+    EXPECT_EQ(shape * shape * shape, g.getNumberVertices());
+    EXPECT_EQ(true, g.isDirected());
+}
+
 
 class TaskArrayTest : public ::testing::Test {
 protected:
@@ -1089,7 +1159,7 @@ TEST_F(STTest, spanningTreeBWSNCTest)
 
 TEST_F(STTest, foo)
 {
-    experimentComplete(GraphType::TORUS_2D, 100);
+    experimentComplete(GraphType::TORUS_2D, 100, false);
 }
 
 int main(int argc, char **argv) {
