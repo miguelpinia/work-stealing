@@ -233,10 +233,11 @@ TEST_F(GraphTest, testGetChilds) {
 TEST_F(GraphTest, testTorus2D) {
     int shape = 20;
     graph result = torus2D(shape);
+    int expectedNumVert = shape * shape;
     EXPECT_EQ(GraphType::TORUS_2D, result.getType());
-    EXPECT_EQ(400, result.getNumberVertices());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
     EXPECT_EQ(false, result.isDirected());
-    for (int k = 0; k < 400; k++) {
+    for (int k = 0; k < expectedNumVert; k++) {
         int i = k / shape;
         int j = k % shape;
         std::list<int> l = {
@@ -249,13 +250,32 @@ TEST_F(GraphTest, testTorus2D) {
     }
 }
 
+TEST_F(GraphTest, testDirectedTorus2D) {
+    int shape = 20;
+    graph result = directedTorus2D(shape);
+    int expectedNumVert = shape * shape;
+    EXPECT_EQ(GraphType::TORUS_2D, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(true, result.isDirected());
+    for (int k = 0; k < expectedNumVert; k++) {
+        int i = k / shape;
+        int j = k % shape;
+        std::list<int> l = {
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
+        };
+        EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(k)));
+    }
+}
+
 TEST_F(GraphTest, testTorus2D60) {
     int shape = 20;
-    graph result = torus2D_60(shape);
+    graph result = torus2D60(shape);
+    int expectedNumVert = shape * shape;
     EXPECT_EQ(GraphType::TORUS_2D_60, result.getType());
-    EXPECT_EQ(400, result.getNumberVertices());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
     EXPECT_EQ(false, result.isDirected());
-    for (int k = 0; k < 400; k++) {
+    for (int k = 0; k < expectedNumVert; k++) {
         int i = k / shape;
         int j = k % shape;
         std::list<int> l = {
@@ -263,6 +283,24 @@ TEST_F(GraphTest, testTorus2D60) {
             i * shape + mod((j + 1), shape),
             mod((i + 1), shape) * shape + j,
             i * shape + mod((j - 1), shape),
+        };
+        EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(k)));
+    }
+}
+
+TEST_F(GraphTest, testDirectedTorus2D60) {
+    int shape = 20;
+    graph result = directedTorus2D60(shape);
+    int expectedNumVert = shape * shape;
+    EXPECT_EQ(GraphType::TORUS_2D_60, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(true, result.isDirected());
+    for (int k = 0; k < expectedNumVert; k++) {
+        int i = k / shape;
+        int j = k % shape;
+        std::list<int> l = {
+            i * shape + mod((j + 1), shape),
+            mod((i + 1), shape) * shape + j,
         };
         EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(k)));
     }
@@ -293,6 +331,27 @@ TEST_F(GraphTest, testTorus3D) {
     }
 }
 
+TEST_F(GraphTest, testDirectedTorus3D) {
+    int shape = 10;
+    int expectedNumVert = 1000;
+    graph result = directedTorus3D(shape);
+    EXPECT_EQ(GraphType::TORUS_3D, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(true, result.isDirected());
+    int i, j, k;
+    for (int m = 0; m < expectedNumVert; m++) {
+        k = mod(m, shape);
+        j = mod((m / shape), shape);
+        i = mod((m / (shape * shape)), shape);
+        std::list<int> l = {
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
+        };
+        EXPECT_THAT(l, ::testing::UnorderedElementsAreArray(result.getNeighbours(m)));
+    }
+}
+
 TEST_F(GraphTest, testTorus3D40) {
     int shape = 10;
     int expectedNumVert = 1000;
@@ -315,6 +374,28 @@ TEST_F(GraphTest, testTorus3D40) {
         };
         EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(m)));
     }
+}
+
+TEST_F(GraphTest, testDirectedTorus3D40) {
+    int shape = 10;
+    graph result = directedTorus3D40(shape);
+    int expectedNumVert = 1000;
+    EXPECT_EQ(GraphType::TORUS_3D_40, result.getType());
+    EXPECT_EQ(expectedNumVert, result.getNumberVertices());
+    EXPECT_EQ(true, result.isDirected());
+    int i, j, k;
+    for (int m = 0; m < expectedNumVert; m++) {
+        k = m % shape;
+        j = (m / shape) % shape;
+        i = (m / (shape * shape)) % shape;
+        std::list<int> l = {
+            (i * shape * shape) + (j * shape) + mod((k + 1), shape),
+            (i * shape * shape) + (mod((j + 1), shape) * shape) + k,
+            (mod((i + 1), shape) * shape * shape) + (j * shape) + k,
+        };
+        EXPECT_THAT(l, ::testing::IsSupersetOf(result.getNeighbours(m)));
+    }
+
 }
 
 TEST_F(GraphTest, graphFactoryTorus2DTest) {

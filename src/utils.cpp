@@ -46,7 +46,34 @@ graph torus2D(int shape)
     return g;
 }
 
-graph torus2D_60(int shape)
+graph directedTorus2D(int shape)
+{
+    bool directed = true;
+    int numVertices = shape * shape;
+    int numEdges = numVertices * 2;
+    graph g(directed, 0, numVertices, GraphType::TORUS_2D);
+    int neighbor, i, j, currentIdx, pos;
+    for (int k = 0; k < numEdges; k++) {
+        j = mod((k / 2), shape);
+        i = k / (shape * 2);
+        currentIdx = (i * shape) + j;
+        pos = mod(k, 2);
+        switch(pos) {
+        case 0:
+            neighbor = i * shape + mod((j + 1), shape);
+            break;
+        case 1:
+            neighbor = mod((i + 1), shape) * shape + j;
+            break;
+        default:
+            neighbor = 0;
+        }
+        g.addEdge(currentIdx, neighbor);
+    }
+    return g;
+}
+
+graph torus2D60(int shape)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -91,6 +118,39 @@ graph torus2D_60(int shape)
     return g;
 }
 
+graph directedTorus2D60(int shape)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 99);
+    bool directed = true;
+    int numVertices = shape * shape;
+    int numEdges = numVertices * 2;
+    graph g(directed, 0, numVertices, GraphType::TORUS_2D_60);
+    int randomNumber, i, j, currentIdx, pos, neighbor;
+    for (int k = 0; k < numEdges; k++) {
+        j = mod(std::round(k / 2), shape);
+        i = std::round(k / (shape * 2));
+        currentIdx = (i * shape) + j;
+        pos = mod(k, 2);
+        randomNumber = distrib(gen);
+        switch(pos) {
+        case 0:
+            neighbor = i * shape + mod((j + 1), shape);
+            g.addEdge(currentIdx, neighbor);
+            break;
+        case 1:
+            if (randomNumber < 60) {
+                neighbor = mod((i + 1), shape) * shape + j;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        default: break;
+        }
+    }
+    return g;
+}
+
 graph torus3D(int shape)
 {
     bool directed = false;
@@ -121,6 +181,37 @@ graph torus3D(int shape)
             neighbor = (mod((i - 1), shape) * shape * shape) + (j * shape) + k;
             break;
         case 5:
+            neighbor = (mod((i + 1), shape) * shape * shape) + (j * shape) + k;
+            break;
+        default:
+            neighbor = 0;
+        }
+        g.addEdge(currentIdx, neighbor);
+    }
+    return g;
+}
+
+graph directedTorus3D(int shape)
+{
+    bool directed = true;
+    int numVertices = shape * shape * shape;
+    int numEdges = numVertices * 3;
+    graph g(directed, 0, numVertices, GraphType::TORUS_3D);
+    int i, j, k, currentIdx, pos, neighbor;
+    for (int m = 0; m < numEdges; m++) {
+        k = mod(std::round(m / 3), shape);
+        j = mod(std::round(m / (shape * 3)), shape);
+        i = mod(std::round(m / (shape * shape * 3)), shape);
+        currentIdx = (i * shape * shape) + (j * shape) + k;
+        pos = mod(m, 3);
+        switch(pos) {
+        case 0:
+            neighbor = (i * shape * shape) + (j * shape) + mod((k + 1), shape);
+            break;
+        case 1:
+            neighbor = (i * shape * shape) + (mod((j + 1), shape) * shape) + k;
+            break;
+        case 2:
             neighbor = (mod((i + 1), shape) * shape * shape) + (j * shape) + k;
             break;
         default:
@@ -190,6 +281,48 @@ graph torus3D40(int shape)
     return g;
 }
 
+graph directedTorus3D40(int shape)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 99);
+    bool directed = true;
+    int numVertices = shape * shape * shape;
+    int numEdges = numVertices * 3;
+    graph g(directed, 0, numVertices, GraphType::TORUS_3D_40);
+    int i, j, k, currentIdx, pos, neighbor, randomNum;
+    for (int m = 0; m < numEdges; m++) {
+        k = mod(std::round(m / 3), shape);
+        j = mod(std::round(m / (shape * 3)), shape);
+        i = mod(std::round(m / (shape * shape * 3)), shape);
+        currentIdx = (i * shape * shape) + (j * shape) + k;
+        pos = mod(m, 3);
+        randomNum = distrib(gen);
+        switch (pos) {
+        case 0:
+            neighbor = (i * shape * shape) + (j * shape) + mod((k + 1), shape);
+            g.addEdge(currentIdx, neighbor);
+            break;
+        case 1:
+            if (randomNum < 40) {
+                neighbor = (i * shape * shape) + mod((j + 1), shape) * shape + k;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        case 2:
+            if (randomNum < 40) {
+                neighbor = (mod((i + 1), shape) * shape * shape) + (j * shape) + k;
+                g.addEdge(currentIdx, neighbor);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    std::string s;
+    return g;
+}
+
 int pickRandomThread(int numThreads, int self) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -234,7 +367,7 @@ graph graphFactory(GraphType type, int shape)
     case GraphType::TORUS_2D:
         return torus2D(shape);
     case GraphType::TORUS_2D_60:
-        return torus2D_60(shape);
+        return torus2D60(shape);
     case GraphType::TORUS_3D:
         return torus3D(shape);
     case GraphType::TORUS_3D_40:

@@ -609,9 +609,13 @@ public:
 
 int mod(int a, int b);
 graph torus2D(int shape);
-graph torus2D_60(int shape);
+graph directedTorus2D(int shape);
+graph torus2D60(int shape);
+graph directedTorus2D60(int shape);
 graph torus3D(int shape);
+graph directedTorus3D(int shape);
 graph torus3D40(int shape);
+graph directedTorus3D40(int shape);
 graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bool directed);
 
 bool isCyclic(graph& g, std::unique_ptr<bool[]>& visited);
