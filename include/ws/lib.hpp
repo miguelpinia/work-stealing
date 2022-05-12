@@ -241,7 +241,7 @@ private:
     std::atomic<int> H;
     std::atomic<int> T;
     int tasksSize;
-    std::atomic<int> *tasks = nullptr;
+    std::unique_ptr<std::atomic<int>[]> tasks;
 public:
     explicit chaselev(int initialSize);
 
@@ -267,7 +267,7 @@ private:
     std::atomic<int> H;
     std::atomic<int> T;
     int tasksSize;
-    std::atomic<int> *tasks = nullptr;
+    std::unique_ptr<std::atomic<int>[]> tasks;
     std::mutex mtx;
 public:
     explicit cilk(int initialSize);
@@ -356,7 +356,7 @@ private:
     int capacity;
     taskArrayWithSize tasks;
     triplet* tp = new triplet{0,0,0};
-    std::atomic_ref<triplet*> anchor{tp};
+    std::atomic<triplet*> anchor{tp};
 public:
     explicit idempotentDeque(int size);
 
@@ -386,6 +386,9 @@ private:
     std::atomic<int>* tasks;
 public:
     wsncmult(int size, int numThreads);
+    ~wsncmult() {
+        delete[] tasks;
+    }
 
     bool put(int task, int label) override;
 
@@ -408,10 +411,15 @@ private:
     int tail;
     int size;
     std::atomic<int> Head;
-    std::vector<int> head;
-    std::vector<int> tasks;
+    std::atomic<int>* head;
+    std::atomic<int>* tasks;
 public:
     wsncmultla(int size, int numThreads);
+
+    ~wsncmultla() {
+        delete[] head;
+        delete[] tasks;
+    }
 
     bool put(int task, int label);
 
@@ -440,6 +448,11 @@ public:
     bwsncmult();
 
     bwsncmult(int capacity, int numThreads);
+
+    ~bwsncmult() {
+        delete[] tasks;
+        delete[] B;
+    }
 
     bool put(int task, int label);
 
@@ -520,9 +533,13 @@ struct Report {
     int numProcessors_;
     int* processors_;
     Report(int numProcessors, int* processors) : numProcessors_(numProcessors), processors_(processors) {}
+    ~Report() {
+        delete[] processors_;
+    }
     void incTakes() { ++takes; }
     void incPuts() { ++puts; }
     void incSteals() { ++steals; }
+
 };
 
 class AbstractStepSpanningTree
@@ -616,6 +633,8 @@ graph torus3D(int shape);
 graph directedTorus3D(int shape);
 graph torus3D40(int shape);
 graph directedTorus3D40(int shape);
+// graph random(int numberVertices, int vertexDegree);
+// graph directedRandom(int numberVertices, int vertexDegree);
 graph buildFromParents(std::atomic<int>* parents, int totalParents, int root, bool directed);
 
 bool isCyclic(graph& g, std::unique_ptr<bool[]>& visited);
@@ -630,7 +649,7 @@ workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int c
 
 int* stubSpanning(graph& g, int size);
 
-bool inArray(int val, int* array, int size);
+bool inArray(int val, int array[], int size);
 
 json compare(json properties);
 
@@ -643,4 +662,16 @@ json experimentComplete(GraphType type, int shape, bool directed);
 std::unordered_map<AlgorithmType, std::vector<json>> buildLists();
 
 std::string getAlgorithmTypeFromEnum(AlgorithmType type);
+
+
+// class MemManager {
+//     void register_thread(int num); // Called once, before any call to op_begin(), num indicate the maximum number of locations the caller can reserve
+//     void unregister_thread(); // Called once, after the last call to op_end()
+//     void op_begin(); // Indicate the beginning of a concurrent operation
+//     void op_end(); // indicate the end of a concurrent operation
+//     bool try_reserve(void* ptr); // try to protect a pointer from reclamation
+//     void unreserve(void* ptr); // stop protecting a pointer
+//     void sched_for_reclaim(void* ptr); // try to reclam a pointer
+// }
+
 #endif /* _LIB_HPP_ */

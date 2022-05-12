@@ -24,8 +24,9 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
     workStealingAlgorithm* algs[params.numThreads];
     int* processors = new int[params.numThreads];
     std::atomic<int> counter = 0;
-    auto t_start = std::chrono::high_resolution_clock::now();
     auto wait_for_begin = []() noexcept {};
+    std::cout << getAlgorithmTypeFromEnum(params.algType) << std::endl;
+    auto t_start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < params.numThreads; i++) {
         workStealingAlgorithm* c = workStealingAlgorithmFactory(params.algType,
                                                                 params.structSize,
@@ -33,7 +34,6 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
         algs[i] = c;
     }
     std::barrier sync_point(params.numThreads, wait_for_begin);
-    std::cout << getAlgorithmTypeFromEnum(params.algType) << std::endl;
     for (int i = 0; i < params.numThreads; i++) {
         std::function<void(int)> func = [&](int processID) {
             workStealingAlgorithm* alg = algs[processID];
@@ -241,6 +241,8 @@ json experiment(ws::Params &params, graph& g)
     result["graphType"] = getGraphTypeFromEnum(params.graphType);
     result["algorithm"] = getAlgorithmTypeFromEnum(params.algType);
     json par = params;
+    delete[] processors;
+    delete[] roots;
     return result;
 }
 

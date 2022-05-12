@@ -474,7 +474,8 @@ GraphCycleType detectCycleType(graph& g)
     return GraphCycleType::TREE;
 }
 
-bool inArray(int val, int* array, int size) {
+bool inArray(int val, int array[], int size) {
+    if (array == nullptr) return false;
     return std::find(array, array + size, val) != array + size;
 }
 
@@ -484,6 +485,7 @@ int* stubSpanning(graph& g, int size)
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distrib(1, g.getNumberVertices());
     int* stubSpanning = new int[size];
+    std::fill(stubSpanning, stubSpanning + size, -1);
     int randomVal = distrib(gen);
     int i = 0;
     std::list<int> neighbors;

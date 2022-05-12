@@ -4,12 +4,11 @@
 // Cilk work-stealing algorithm //
 //////////////////////////////////
 
-cilk::cilk(int initialSize) {
+cilk::cilk(int initialSize) : tasks (new std::atomic<int>[initialSize]) {
     H = 0;
     T = 0;
     tasksSize = initialSize;
-    tasks = new std::atomic<int>[initialSize];
-    std::fill(tasks, tasks + initialSize, BOTTOM);
+    std::fill(tasks.get(), tasks.get() + initialSize, BOTTOM);
 }
 
 bool cilk::isEmpty() {
@@ -22,9 +21,7 @@ void cilk::expand() {
     int newSize = 2 * tasksSize;
     auto *newData = new std::atomic<int>[newSize];
     for (int i = 0; i < tasksSize; i++) newData[i] = tasks[i].load();
-    std::atomic<int> *tmp = tasks;
-    tasks = newData;
-    delete[] tmp;
+    tasks.reset(newData);
     tasksSize = newSize;
 }
 

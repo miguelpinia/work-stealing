@@ -1162,6 +1162,20 @@ TEST_F(STTest, foo)
     experimentComplete(GraphType::TORUS_2D, 100, false);
 }
 
+TEST_F(STTest, lockFreedom)
+{
+    triplet* t = new triplet{0,0,0};
+    std::atomic<int> x(0);
+    std::atomic<bool> y(true);
+    std::atomic<triplet*> tp{t};
+    std::cout << string_format("atomic<int> is lock_free: %d", x.is_lock_free()) << std::endl;
+    std::cout << string_format("atomic<bool> is lock_free: %d", y.is_lock_free()) << std::endl;
+    std::cout << string_format("atomic<pointer> is lock_free: %d", tp.is_lock_free()) << std::endl;
+    EXPECT_EQ(true, x.is_lock_free());
+    EXPECT_EQ(true, y.is_lock_free());
+    EXPECT_EQ(true, tp.is_lock_free());
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
