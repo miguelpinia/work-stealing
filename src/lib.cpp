@@ -78,6 +78,10 @@ graph spanningTree(graph& g, int* roots, Report& report, ws::Params& params)
     delete[] colors;
     delete[] parents;
     delete[] visited;
+    for (int i = 0; i < params.numThreads; i++) {
+        delete algs[i];
+    }
+
     return newGraph;
 }
 
@@ -199,8 +203,10 @@ std::string getAlgorithmTypeFromEnum(AlgorithmType type)
         return "CHASELEV";
     case AlgorithmType::CILK:
         return "CILK";
-    case AlgorithmType::IDEMPOTENT_DEQUE:
-        return "IDEMPOTENT_DEQUE";
+    // case AlgorithmType::IDEMPOTENT_DEQUE:
+    //     return "IDEMPOTENT_DEQUE";
+    case AlgorithmType::IDEMPOTENT_DEQUE_2:
+        return "IDEMPOTENT_DEQUE_2";
     case AlgorithmType::IDEMPOTENT_LIFO:
         return "IDEMPOTENT_LIFO";
     case AlgorithmType::IDEMPOTENT_FIFO:

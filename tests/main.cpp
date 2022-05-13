@@ -824,35 +824,100 @@ TEST_F(idempotentLIFOTest, test_resize) {
     EXPECT_EQ(40, ws.getSize());
 }
 
-class idempotentDequeTest : public ::testing::Test {
-protected:
-    idempotentDequeTest() {}
+// class idempotentDequeTest : public ::testing::Test {
+// protected:
+//     idempotentDequeTest() {}
 
-    ~idempotentDequeTest() {}
+//     ~idempotentDequeTest() {}
+
+//     void SetUp() {}
+
+//     void TearDown() {}
+// };
+
+// TEST_F(idempotentDequeTest, testIsEmpty) {
+//     idempotentDeque ws(10);
+//     EXPECT_EQ(true, ws.isEmpty());
+//     idempotentDeque ws1(10);
+//     EXPECT_EQ(true, ws1.isEmpty());
+//     ws1.put(10);
+//     EXPECT_EQ(false, ws1.isEmpty());
+// }
+
+// TEST_F(idempotentDequeTest, testNotEmpty) {
+//     idempotentDeque ws(10);
+//     ws.put(10);
+//     ws.put(11);
+//     EXPECT_EQ(false, ws.isEmpty());
+// }
+
+// TEST_F(idempotentDequeTest, test_take) {
+//     idempotentDeque ws(10);
+//     for (int i = 0; i < 10; i++) {
+//         bool inserted = ws.put(i);
+//         EXPECT_TRUE(inserted);
+//     }
+//     for (int i = 9; i >= 0; i--) {
+//         int output = ws.take();
+//         EXPECT_EQ(i, output);
+//     }
+// }
+
+// TEST_F(idempotentDequeTest, test_steal) {
+//     idempotentDeque ws(10);
+//     for (int i = 0; i < 10; i++) {
+//         bool inserted = ws.put(i);
+//         EXPECT_TRUE(inserted);
+//     }
+//     for (int i = 0; i < 10; i++) {
+//         int output = ws.steal();
+//         EXPECT_EQ(i, output);
+//     }
+// }
+
+// TEST_F(idempotentDequeTest, test_resize) {
+//     idempotentDeque ws(10);
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(10, ws.getSize());
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(20, ws.getSize());
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(40, ws.getSize());
+// }
+
+/////////////
+// Variant //
+/////////////
+
+class idempotentDeque2Test : public ::testing::Test {
+protected:
+    idempotentDeque2Test() {}
+
+    ~idempotentDeque2Test() {}
 
     void SetUp() {}
 
     void TearDown() {}
 };
 
-TEST_F(idempotentDequeTest, testIsEmpty) {
-    idempotentDeque ws(10);
+TEST_F(idempotentDeque2Test, testIsEmpty) {
+    idempotentDeque2 ws(10);
     EXPECT_EQ(true, ws.isEmpty());
-    idempotentDeque ws1(10);
+    idempotentDeque2 ws1(10);
     EXPECT_EQ(true, ws1.isEmpty());
     ws1.put(10);
     EXPECT_EQ(false, ws1.isEmpty());
 }
 
-TEST_F(idempotentDequeTest, testNotEmpty) {
-    idempotentDeque ws(10);
+TEST_F(idempotentDeque2Test, testNotEmpty) {
+    idempotentDeque2 ws(10);
     ws.put(10);
     ws.put(11);
     EXPECT_EQ(false, ws.isEmpty());
 }
 
-TEST_F(idempotentDequeTest, test_take) {
-    idempotentDeque ws(10);
+TEST_F(idempotentDeque2Test, test_take) {
+    idempotentDeque2 ws(10);
     for (int i = 0; i < 10; i++) {
         bool inserted = ws.put(i);
         EXPECT_TRUE(inserted);
@@ -863,8 +928,8 @@ TEST_F(idempotentDequeTest, test_take) {
     }
 }
 
-TEST_F(idempotentDequeTest, test_steal) {
-    idempotentDeque ws(10);
+TEST_F(idempotentDeque2Test, test_steal) {
+    idempotentDeque2 ws(10);
     for (int i = 0; i < 10; i++) {
         bool inserted = ws.put(i);
         EXPECT_TRUE(inserted);
@@ -875,8 +940,8 @@ TEST_F(idempotentDequeTest, test_steal) {
     }
 }
 
-TEST_F(idempotentDequeTest, test_resize) {
-    idempotentDeque ws(10);
+TEST_F(idempotentDeque2Test, test_resize) {
+    idempotentDeque2 ws(10);
     for (int i = 0; i < 10; i++) ws.put(i);
     EXPECT_EQ(10, ws.getSize());
     for (int i = 0; i < 10; i++) ws.put(i);
@@ -884,6 +949,7 @@ TEST_F(idempotentDequeTest, test_resize) {
     for (int i = 0; i < 10; i++) ws.put(i);
     EXPECT_EQ(40, ws.getSize());
 }
+
 
 ///////////////////////////////////////////
 // Work-stealing with multiplicity tests //
@@ -1045,6 +1111,8 @@ TEST_F(STTest, spanningTreeWSNCTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
 TEST_F(STTest, spanningTreeChaseLevTest)
@@ -1063,6 +1131,8 @@ TEST_F(STTest, spanningTreeChaseLevTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
 TEST_F(STTest, spanningTreeCilkTest)
@@ -1081,6 +1151,8 @@ TEST_F(STTest, spanningTreeCilkTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
 TEST_F(STTest, spanningTreeIdemFIFOTest)
@@ -1099,16 +1171,36 @@ TEST_F(STTest, spanningTreeIdemFIFOTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
-TEST_F(STTest, spanningTreeIdemDequeTest)
+// TEST_F(STTest, spanningTreeIdemDequeTest)
+// {
+//     const int numProcessors = std::thread::hardware_concurrency();
+//     ws::Params p{GraphType::TORUS_2D, 100, false,
+//         numProcessors, AlgorithmType::IDEMPOTENT_DEQUE,
+//         10000, 1, StepSpanningTreeType::COUNTER, false,
+//         false, false, false};
+//     graph g = torus2D(100);
+//     int* processors = new int[numProcessors];
+//     Report r{numProcessors, processors};
+//     int* roots = stubSpanning(g, numProcessors);
+//     graph result = spanningTree(g, roots, r, p);
+//     GraphCycleType type = detectCycleType(result);
+//     std::cout << (r.executionTime) << "ns" << std::endl;
+//     experiment(p, g);
+//     EXPECT_EQ(GraphCycleType::TREE, type);
+// }
+
+TEST_F(STTest, spanningTreeIdemDeque2Test)
 {
     const int numProcessors = std::thread::hardware_concurrency();
-    ws::Params p{GraphType::TORUS_2D, 100, false,
-        numProcessors, AlgorithmType::IDEMPOTENT_DEQUE,
+    ws::Params p{GraphType::TORUS_2D, 300, false,
+        numProcessors, AlgorithmType::IDEMPOTENT_DEQUE_2,
         10000, 1, StepSpanningTreeType::COUNTER, false,
         false, false, false};
-    graph g = torus2D(100);
+    graph g = torus2D(300);
     int* processors = new int[numProcessors];
     Report r{numProcessors, processors};
     int* roots = stubSpanning(g, numProcessors);
@@ -1117,7 +1209,10 @@ TEST_F(STTest, spanningTreeIdemDequeTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
+
 
 TEST_F(STTest, spanningTreeIdemLIFOTest)
 {
@@ -1135,6 +1230,8 @@ TEST_F(STTest, spanningTreeIdemLIFOTest)
     std::cout << (r.executionTime) << "ns" << std::endl;
     experiment(p, g);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
 TEST_F(STTest, spanningTreeBWSNCTest)
@@ -1155,11 +1252,13 @@ TEST_F(STTest, spanningTreeBWSNCTest)
     // json j = {{"VERTEX_SIZE", 10}, {"STRUCT_SIZE", 100}};
     // compare(j);
     EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
 }
 
 TEST_F(STTest, foo)
 {
-    experimentComplete(GraphType::TORUS_2D, 100, false);
+    experimentComplete(GraphType::TORUS_2D, 300, false);
 }
 
 TEST_F(STTest, lockFreedom)
@@ -1174,6 +1273,7 @@ TEST_F(STTest, lockFreedom)
     EXPECT_EQ(true, x.is_lock_free());
     EXPECT_EQ(true, y.is_lock_free());
     EXPECT_EQ(true, tp.is_lock_free());
+    delete t;
 }
 
 int main(int argc, char **argv) {

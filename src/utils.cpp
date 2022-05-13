@@ -323,6 +323,29 @@ graph directedTorus3D40(int shape)
     return g;
 }
 
+// graph random(int numVertices, int vertexDegree) {
+//     std::random_device rd;
+//     std::mt19937 gen(rd());
+//     std::uniform_int_distribution<> distrib(0, numVertices);
+//     bool directed = true;
+//     int numEdges = numVertices * vertexDegree;
+//     edge[] edges = new edge[numEdges];
+//     int randomVertex, i, j, current;
+//     bool inPrevious;
+//     for (int k = 0; k < numEdges; k++) {
+//         i = k / edges;
+//         j = mod((k / vertexDegree), numberVertices);
+//         current = (i * numberVertices) + j;
+//         do {
+//             inPrevious = false;
+//             randomVertex = distrib(gen);
+//             for (int idx = 0; idx < mod(k, vertexDegree); i++) {
+//                 if (edges[k] != -1 && randomVertex == edges[k])
+//             }
+//         }
+//     }
+// }
+
 int pickRandomThread(int numThreads, int self) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -343,8 +366,10 @@ workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int c
         return new idempotentFIFO(capacity);
     case AlgorithmType::IDEMPOTENT_LIFO:
         return new idempotentLIFO(capacity);
-    case AlgorithmType::IDEMPOTENT_DEQUE:
-        return new idempotentDeque(capacity);
+    // case AlgorithmType::IDEMPOTENT_DEQUE:
+    //     return new idempotentDeque(capacity);
+    case AlgorithmType::IDEMPOTENT_DEQUE_2:
+        return new idempotentDeque2(capacity);
     case AlgorithmType::WS_NC_MULT_OPT:
         return new wsncmult(capacity, numThreads);
     case AlgorithmType::B_WS_NC_MULT_OPT:

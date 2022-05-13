@@ -57,7 +57,8 @@ enum AlgorithmType {
     CILK,  // Cilk THE work-stealing algorithm
     IDEMPOTENT_FIFO,  // Idempotent work-stealing first-in first-out
     IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
-    IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
+    // IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
+    IDEMPOTENT_DEQUE_2,
     WS_NC_MULT_OPT,   // Work-stealing with multiplicity optimized ("infinite array")
     // WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
     B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
@@ -200,6 +201,7 @@ public:
 
 class workStealingAlgorithm {
 public:
+    virtual ~workStealingAlgorithm() {}
     virtual bool isEmpty() { return false; }
 
     virtual bool isEmpty(int label) {
@@ -377,17 +379,50 @@ public:
     }
 };
 
+struct s_triplet {
+    unsigned int head:21;
+    unsigned int size:21;
+    unsigned int tag:21;
+};
+
+class idempotentDeque2 : public workStealingAlgorithm {
+private:
+    int capacity;
+    taskArrayWithSize tasks;
+    unsigned long long p = 0;
+    std::atomic<unsigned long long> anchor{p};
+public:
+    explicit idempotentDeque2(int size);
+
+    bool isEmpty() override;
+
+    bool put (int task) override;
+
+    int take() override;
+
+    int steal() override;
+
+    void expand();
+
+    int getSize();
+
+    void printType() {
+        std::cout << "idempotent DEQUE with bit-fields" << std::endl;
+    }
+};
+
 class wsncmult : public workStealingAlgorithm {
 private:
     int tail;
     int capacity;
     std::atomic<int> Head;
-    std::unique_ptr<int[]> head;
+    int* head;
     std::atomic<int>* tasks;
 public:
     wsncmult(int size, int numThreads);
-    ~wsncmult() {
+    ~wsncmult() override {
         delete[] tasks;
+        delete[] head;
     }
 
     bool put(int task, int label) override;
@@ -416,7 +451,7 @@ private:
 public:
     wsncmultla(int size, int numThreads);
 
-    ~wsncmultla() {
+    ~wsncmultla() override {
         delete[] head;
         delete[] tasks;
     }
@@ -440,7 +475,7 @@ class bwsncmult : public workStealingAlgorithm {
 private:
     int tail;
     int capacity;
-    int *head;
+    std::shared_ptr<int[]> head;
     std::atomic<int> Head = 0;
     std::atomic<int> *tasks;
     std::atomic<bool> *B;
@@ -449,7 +484,7 @@ public:
 
     bwsncmult(int capacity, int numThreads);
 
-    ~bwsncmult() {
+    ~bwsncmult() override {
         delete[] tasks;
         delete[] B;
     }
@@ -482,6 +517,10 @@ private:
 
 public:
     bwsncmultla(int size, int numThreads);
+
+    ~bwsncmultla() override {
+        delete[] head;
+    }
 
     bool put(int task, int label);
 

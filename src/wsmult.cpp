@@ -4,10 +4,12 @@
 // Work stealing algorithms and classes //
 //////////////////////////////////////////
 
-wsncmult::wsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity) {
+wsncmult::wsncmult(int capacity, int numThreads) :
+    tail(-1),
+    capacity(capacity) {
+    head = new int[numThreads];
     Head = 0;
-    head = std::make_unique<int[]>(numThreads);
-    std::fill(head.get(), head.get() + numThreads, 0);
+    std::fill(head, head + numThreads, 0);
     tasks = new std::atomic<int>[capacity];
     std::fill(tasks, tasks + capacity, BOTTOM);
 }
@@ -56,7 +58,9 @@ void wsncmult::expand() {
     auto newCapacity = 2 * capacity;
     auto newData = new std::atomic<int>[newCapacity];
     for (int i = 0; i < capacity; i++) newData[i] = tasks[i].load();
+    auto tmp = tasks;
     tasks = newData;
+    delete[] tmp;
     std::atomic_thread_fence(std::memory_order_release);
     capacity = 2 * capacity;
     std::atomic_thread_fence(std::memory_order_release);
@@ -75,7 +79,7 @@ bwsncmult::bwsncmult() : tail(-1), capacity(0) {}
 
 bwsncmult::bwsncmult(int capacity, int numThreads) : tail(-1), capacity(capacity)
 {
-    head = new int[numThreads];
+    head = std::make_shared<int[]>(numThreads);
     tasks = new std::atomic<int>[capacity];
     B = new std::atomic<bool>[capacity];
     for (int i = 0; i < numThreads; i++) {

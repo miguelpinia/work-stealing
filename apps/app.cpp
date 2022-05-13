@@ -5,7 +5,7 @@
 
 int main() {
     int c = suma(1, 2);
-    json values = experimentComplete(GraphType::TORUS_2D, 1000, false);
+    json values = experimentComplete(GraphType::TORUS_2D, 100, false);
     std::ofstream file("results.json");
     file << std::setw(4) << values << std::endl;
     file.close();

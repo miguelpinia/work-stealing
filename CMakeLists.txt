@@ -34,8 +34,8 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -latomic")
-# add_compile_options(-fsanitize=address)
-# add_link_options(-fsanitize=address)
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
 
 enable_testing()
 

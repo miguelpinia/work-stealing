@@ -1,4 +1,16 @@
 #include "ws/lib.hpp"
+// #include "ws/hazard_pointers.hpp"
+
+
+// things to implement
+
+// - Support for memory recycle
+// - Check how to manage references and tags to avoid the ABA problem
+// - Memory management for complex objects
+
+// For memory management, we should add the support for hazard pointers
+
+
 
 //////////////////////////
 // Task array with size //
@@ -6,15 +18,18 @@
 
 taskArrayWithSize::taskArrayWithSize() : size(1), array(new std::atomic<int>[1]) {}
 
-taskArrayWithSize::taskArrayWithSize(int size) : size(size), array(new std::atomic<int>[size]) {
+taskArrayWithSize::taskArrayWithSize(int size) : size(size) {
+    array = new std::atomic<int>[size];
     std::fill(array, array + size, BOTTOM);
 }
 
-taskArrayWithSize::taskArrayWithSize(int size, int defaultValue) : size(size), array(new std::atomic<int>[size]) {
+taskArrayWithSize::taskArrayWithSize(int size, int defaultValue) : size(size) {
+    array = new std::atomic<int>[size];
     std::fill(array, array + size, defaultValue);
 }
 
-taskArrayWithSize::taskArrayWithSize(const taskArrayWithSize& other) : size(other.size), array(new std::atomic<int>[other.size]) {
+taskArrayWithSize::taskArrayWithSize(const taskArrayWithSize& other) : size(other.size) {
+    array = new std::atomic<int>[other.size];
     for (int i = 0; i < other.size; i++) array[i] = other.array[i].load();
 }
 
@@ -211,17 +226,18 @@ int idempotentLIFO::getSize() {
 // Idempotent DEQUE work-stealing algorithm //
 //////////////////////////////////////////////
 
-idempotentDeque::idempotentDeque(int size) {
-    capacity = size;
-    tasks = taskArrayWithSize(size);
-}
+idempotentDeque::idempotentDeque(int size) : capacity(size),
+                                             tasks(taskArrayWithSize(size)){}
 
 bool idempotentDeque::isEmpty() {
     return anchor.load()->size == 0;
 }
 
 bool idempotentDeque::put(int task) {
-    auto[head, size, tag] = *anchor.load();
+    // std::atomic<void*>& hp
+    // auto old_anchor = anchor.load();
+    auto old_anchor = anchor.load();
+    auto[head, size, tag] = *old_anchor;
     if (size == tasks.getSize()) {
         expand();
         return put(task);
@@ -229,10 +245,44 @@ bool idempotentDeque::put(int task) {
     tasks.set((head + size) % tasks.getSize(), task);
     std::atomic_thread_fence(std::memory_order_release);
     anchor.store(new triplet{head, size + 1, tag + 1});
+    // delete old_anchor;
+    // std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();
+    // triplet* old_anchor = anchor.load();
+    // do {
+    //     triplet* temp;
+    //     do {
+    //         temp = old_anchor;
+    //         hp.store(old_anchor);
+    //         old_anchor = anchor.load();
+    //     } while (old_anchor != temp);
+    // } while(old_anchor &&
+    //         anchor.compare_exchange_strong(old_anchor,
+    //                                        new triplet(head, size + 1, tag + 1)));
+    // hp.store(nullptr);
+    // if (old_anchor) {
+
+    //     if (outstanding_hazard_pointers_for(old_anchor)) {
+    //         reclaim_later(old_anchor);
+    //     } else {
+    //         delete old_anchor;
+    //     }
+    //     delete_nodes_with_no_hazards();
+    // }
     return true;
 }
 
 int idempotentDeque::take() {
+    // std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();
+    // triplet* old_anchor = anchor.load();
+    // do {
+    //     triplet* temp;
+    //     do {
+    //         temp = old_anchor;
+    //         hp.store(old_anchor);
+    //         old_anchor = anchor.load();
+    //     } while(old_anchor != temp);
+    // } while (old_anchor && anchor.compare_exchange_strong(old_anchor, new triplet(head, size + 1, )))
+    // triplet* temp;
     auto [head, size, tag] = *anchor.load();
     if (size == 0) return EMPTY;
     int task = tasks.get((head + size - 1) % tasks.getSize());
@@ -250,6 +300,7 @@ int idempotentDeque::steal() {
         auto task = a->get(head % a->getSize());
         auto h2 = (head + 1) % a->getSize();
         if (anchor.compare_exchange_strong(oldReference, new triplet{h2, size - 1, tag})) {
+            // delete oldReference;
             return task;
         }
     }
@@ -268,5 +319,85 @@ void idempotentDeque::expand() {
 }
 
 int idempotentDeque::getSize() {
+    return tasks.getSize();
+}
+
+
+//////////////////////////////////////////////
+// Idempotent DEQUE work-stealing algorithm //
+//////////////////////////////////////////////
+
+idempotentDeque2::idempotentDeque2(int size) : capacity(size),
+                                               tasks(taskArrayWithSize(size)){}
+
+bool idempotentDeque2::isEmpty() {
+    unsigned long long value = anchor.load();
+    return ((value >> 16) & 0xFFFFFF) == 0;
+}
+
+bool idempotentDeque2::put(int task) {
+    unsigned long long value = anchor.load();
+    auto head = (value >> 40) & 0xFFFFFF;
+    auto size = (value >> 16) & 0xFFFFFF;
+    auto tag = value & 0xFFFF;
+    // auto[head, size, tag] = anchor.load();
+    if ((int)size == tasks.getSize()) {
+        expand();
+        return put(task);
+    }
+    tasks.set((head + size) % tasks.getSize(), task);
+    std::atomic_thread_fence(std::memory_order_release);
+    unsigned long long newValue = (tag + 1) | (size + 1) << 16 | head << 40;
+    anchor.store(newValue);
+    return true;
+}
+
+int idempotentDeque2::take() {
+    unsigned long long value = anchor.load();
+    auto head = (value >> 40) & 0xFFFFFF;
+    auto size = (value >> 16) & 0xFFFFFF;
+    auto tag = value & 0xFFFF;
+    if (size == 0) return EMPTY;
+    int task = tasks.get((head + size - 1) % tasks.getSize());
+    unsigned long long newValue = tag | (size - 1) << 16 | head << 40;
+    anchor.store(newValue);
+    return task;
+}
+
+int idempotentDeque2::steal() {
+    while (true) {
+        // auto oldReference = anchor.load();
+        unsigned long long value = anchor.load();
+        auto head = (value >> 40) & 0xFFFFFF;
+        auto size = (value >> 16) & 0xFFFFFF;
+        auto tag = value & 0xFFFF;
+        // auto[head, size, tag] = oldReference;
+        if (size == 0) return EMPTY;
+        std::atomic_thread_fence(std::memory_order_acquire);
+        taskArrayWithSize* a = &tasks;
+        auto task = a->get(head % a->getSize());
+        unsigned long long h2 = (head + 1) % a->getSize();
+        unsigned long long newValue = tag | (size - 1) << 16 | h2 << 40;
+        if (anchor.compare_exchange_strong(value, newValue)) {
+            return task;
+        }
+    }
+}
+
+void idempotentDeque2::expand() {
+    unsigned long long value = anchor.load();
+    auto head = (value >> 40) & 0xFFFFFF;
+    auto size = (value >> 16) & 0xFFFFFF;
+    taskArrayWithSize a(2 * tasks.getSize());
+    std::atomic_thread_fence(std::memory_order_release);
+    for (int i = 0; i < (int)size; i++) {
+        a.set((head + i) % a.getSize(), tasks.get((head + i) % tasks.getSize()));
+        std::atomic_thread_fence(std::memory_order_release);
+    }
+    tasks = std::move(a);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+}
+
+int idempotentDeque2::getSize() {
     return tasks.getSize();
 }
