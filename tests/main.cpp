@@ -889,66 +889,66 @@ TEST_F(idempotentLIFOTest, test_resize) {
 // Variant //
 /////////////
 
-class idempotentDeque2Test : public ::testing::Test {
-protected:
-    idempotentDeque2Test() {}
+// class idempotentDeque2Test : public ::testing::Test {
+// protected:
+//     idempotentDeque2Test() {}
 
-    ~idempotentDeque2Test() {}
+//     ~idempotentDeque2Test() {}
 
-    void SetUp() {}
+//     void SetUp() {}
 
-    void TearDown() {}
-};
+//     void TearDown() {}
+// };
 
-TEST_F(idempotentDeque2Test, testIsEmpty) {
-    idempotentDeque2 ws(10);
-    EXPECT_EQ(true, ws.isEmpty());
-    idempotentDeque2 ws1(10);
-    EXPECT_EQ(true, ws1.isEmpty());
-    ws1.put(10);
-    EXPECT_EQ(false, ws1.isEmpty());
-}
+// TEST_F(idempotentDeque2Test, testIsEmpty) {
+//     idempotentDeque2 ws(10);
+//     EXPECT_EQ(true, ws.isEmpty());
+//     idempotentDeque2 ws1(10);
+//     EXPECT_EQ(true, ws1.isEmpty());
+//     ws1.put(10);
+//     EXPECT_EQ(false, ws1.isEmpty());
+// }
 
-TEST_F(idempotentDeque2Test, testNotEmpty) {
-    idempotentDeque2 ws(10);
-    ws.put(10);
-    ws.put(11);
-    EXPECT_EQ(false, ws.isEmpty());
-}
+// TEST_F(idempotentDeque2Test, testNotEmpty) {
+//     idempotentDeque2 ws(10);
+//     ws.put(10);
+//     ws.put(11);
+//     EXPECT_EQ(false, ws.isEmpty());
+// }
 
-TEST_F(idempotentDeque2Test, test_take) {
-    idempotentDeque2 ws(10);
-    for (int i = 0; i < 10; i++) {
-        bool inserted = ws.put(i);
-        EXPECT_TRUE(inserted);
-    }
-    for (int i = 9; i >= 0; i--) {
-        int output = ws.take();
-        EXPECT_EQ(i, output);
-    }
-}
+// TEST_F(idempotentDeque2Test, test_take) {
+//     idempotentDeque2 ws(10);
+//     for (int i = 0; i < 10; i++) {
+//         bool inserted = ws.put(i);
+//         EXPECT_TRUE(inserted);
+//     }
+//     for (int i = 9; i >= 0; i--) {
+//         int output = ws.take();
+//         EXPECT_EQ(i, output);
+//     }
+// }
 
-TEST_F(idempotentDeque2Test, test_steal) {
-    idempotentDeque2 ws(10);
-    for (int i = 0; i < 10; i++) {
-        bool inserted = ws.put(i);
-        EXPECT_TRUE(inserted);
-    }
-    for (int i = 0; i < 10; i++) {
-        int output = ws.steal();
-        EXPECT_EQ(i, output);
-    }
-}
+// TEST_F(idempotentDeque2Test, test_steal) {
+//     idempotentDeque2 ws(10);
+//     for (int i = 0; i < 10; i++) {
+//         bool inserted = ws.put(i);
+//         EXPECT_TRUE(inserted);
+//     }
+//     for (int i = 0; i < 10; i++) {
+//         int output = ws.steal();
+//         EXPECT_EQ(i, output);
+//     }
+// }
 
-TEST_F(idempotentDeque2Test, test_resize) {
-    idempotentDeque2 ws(10);
-    for (int i = 0; i < 10; i++) ws.put(i);
-    EXPECT_EQ(10, ws.getSize());
-    for (int i = 0; i < 10; i++) ws.put(i);
-    EXPECT_EQ(20, ws.getSize());
-    for (int i = 0; i < 10; i++) ws.put(i);
-    EXPECT_EQ(40, ws.getSize());
-}
+// TEST_F(idempotentDeque2Test, test_resize) {
+//     idempotentDeque2 ws(10);
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(10, ws.getSize());
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(20, ws.getSize());
+//     for (int i = 0; i < 10; i++) ws.put(i);
+//     EXPECT_EQ(40, ws.getSize());
+// }
 
 
 ///////////////////////////////////////////
@@ -1015,6 +1015,74 @@ TEST_F(wsncmultTest, test_resize) {
     EXPECT_EQ(20, ws.getCapacity());
     for (int i = 0; i < 10; i++) ws.put(i, 0);
     EXPECT_EQ(40, ws.getCapacity());
+}
+
+/////////////////////////////////////////////////////////
+// Work-stealing with multiplicity list-of-array based //
+/////////////////////////////////////////////////////////
+
+class wsncmultlaTest : public ::testing::Test {
+protected:
+    wsncmultlaTest() {}
+
+    ~wsncmultlaTest() {}
+
+    void SetUp() {}
+
+    void TearDown() {}
+};
+
+TEST_F(wsncmultlaTest, testIsEmpty) {
+    wsncmultla ws(1, 10, 1);
+    EXPECT_EQ(true, ws.isEmpty(0));
+    wsncmultla ws1(1, 10, 2);
+    EXPECT_EQ(true, ws1.isEmpty(0));
+    ws1.put(10, 1);
+    EXPECT_EQ(false, ws1.isEmpty(0));
+    EXPECT_EQ(false, ws1.isEmpty(1));
+}
+
+TEST_F(wsncmultlaTest, testNotEmpty) {
+    wsncmultla ws(1, 10, 4);
+    ws.put(10, 3);
+    EXPECT_EQ(false, ws.isEmpty(3));
+}
+
+TEST_F(wsncmultlaTest, testFIFO_take) {
+    wsncmultla ws(1, 10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.take(0);
+        EXPECT_EQ(i, output);
+    }
+}
+
+TEST_F(wsncmultlaTest, testFIFO_steal) {
+    wsncmultla ws(1, 10, 1);
+    for (int i = 0; i < 1000; i++) {
+        bool inserted = ws.put(i, 0);
+        EXPECT_TRUE(inserted);
+    }
+    for (int i = 0; i < 1000; i++) {
+        int output = ws.steal(0);
+        EXPECT_EQ(i, output);
+
+    }
+}
+
+TEST_F(wsncmultlaTest, test_resize) {
+    wsncmultla ws(1, 10, 1);
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(10, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(20, ws.getCapacity());
+    for (int i = 0; i < 10; i++) ws.put(i, 0);
+    EXPECT_EQ(30, ws.getCapacity());
+    for (int i = 0; i < 20; i++) ws.put(i, 0);
+    EXPECT_EQ(50, ws.getCapacity());
 }
 
 /////////////////////////////////////////////
@@ -1115,6 +1183,26 @@ TEST_F(STTest, spanningTreeWSNCTest)
     delete[] roots;
 }
 
+TEST_F(STTest, spanningTreeWSNCLATest)
+{
+    const int numProcessors = std::thread::hardware_concurrency();
+    ws::Params p{GraphType::TORUS_2D, 100, false,
+        numProcessors, AlgorithmType::WS_NC_MULT_LA_OPT,
+        10000, 1, StepSpanningTreeType::COUNTER, false,
+        false, false, true};
+    graph g = torus2D(100);
+    int* processors = new int[numProcessors];
+    Report r{numProcessors, processors};
+    int* roots = stubSpanning(g, numProcessors);
+    graph result = spanningTree(g, roots, r, p);
+    GraphCycleType type = detectCycleType(result);
+    std::cout << (r.executionTime) << "ns" << std::endl;
+    experiment(p, g);
+    EXPECT_EQ(GraphCycleType::TREE, type);
+    delete[] processors;
+    delete[] roots;
+}
+
 TEST_F(STTest, spanningTreeChaseLevTest)
 {
     const int numProcessors = std::thread::hardware_concurrency();
@@ -1193,25 +1281,25 @@ TEST_F(STTest, spanningTreeIdemFIFOTest)
 //     EXPECT_EQ(GraphCycleType::TREE, type);
 // }
 
-TEST_F(STTest, spanningTreeIdemDeque2Test)
-{
-    const int numProcessors = std::thread::hardware_concurrency();
-    ws::Params p{GraphType::TORUS_2D, 300, false,
-        numProcessors, AlgorithmType::IDEMPOTENT_DEQUE_2,
-        10000, 1, StepSpanningTreeType::COUNTER, false,
-        false, false, false};
-    graph g = torus2D(300);
-    int* processors = new int[numProcessors];
-    Report r{numProcessors, processors};
-    int* roots = stubSpanning(g, numProcessors);
-    graph result = spanningTree(g, roots, r, p);
-    GraphCycleType type = detectCycleType(result);
-    std::cout << (r.executionTime) << "ns" << std::endl;
-    experiment(p, g);
-    EXPECT_EQ(GraphCycleType::TREE, type);
-    delete[] processors;
-    delete[] roots;
-}
+// TEST_F(STTest, spanningTreeIdemDeque2Test)
+// {
+//     const int numProcessors = std::thread::hardware_concurrency();
+//     ws::Params p{GraphType::TORUS_2D, 300, false,
+//         numProcessors, AlgorithmType::IDEMPOTENT_DEQUE_2,
+//         10000, 1, StepSpanningTreeType::COUNTER, false,
+//         false, false, false};
+//     graph g = torus2D(300);
+//     int* processors = new int[numProcessors];
+//     Report r{numProcessors, processors};
+//     int* roots = stubSpanning(g, numProcessors);
+//     graph result = spanningTree(g, roots, r, p);
+//     GraphCycleType type = detectCycleType(result);
+//     std::cout << (r.executionTime) << "ns" << std::endl;
+//     experiment(p, g);
+//     EXPECT_EQ(GraphCycleType::TREE, type);
+//     delete[] processors;
+//     delete[] roots;
+// }
 
 
 TEST_F(STTest, spanningTreeIdemLIFOTest)
@@ -1255,6 +1343,8 @@ TEST_F(STTest, spanningTreeBWSNCTest)
     delete[] processors;
     delete[] roots;
 }
+
+
 
 TEST_F(STTest, foo)
 {

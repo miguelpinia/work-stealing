@@ -171,3 +171,125 @@ void bwsncmult::expand() {
     capacity = 2 * capacity;
     std::atomic_thread_fence(std::memory_order_release);
 }
+
+// /////////////////////////////////////
+// // Work-stealing linked-list based //
+// /////////////////////////////////////
+
+NodeWS::NodeWS(int capacity) : capacity(capacity) {
+    array = new int[capacity];
+    array[0] = BOTTOM;
+    array[1] = BOTTOM;
+    next = nullptr;
+    // std::cout << "Nuevo Nodo" << std::endl;
+}
+
+NodeWS::~NodeWS(){
+    delete[] array;
+    if (next != nullptr) delete next;
+}
+
+int& NodeWS::operator[](int i) {
+    return array[i];
+}
+
+void NodeWS::setNext(NodeWS* next) {
+    this->next = next;
+}
+
+NodeWS* NodeWS::getNext() {
+    return next;
+}
+
+wsncmultla::wsncmultla(int initialSize, int arrayCapacity, int numThreads) :
+    arrayCapacity(arrayCapacity),
+    processors(numThreads),
+    tasksLength(initialSize),
+    tail(-1),
+    Head(0) {
+    tasks = new NodeWS*[tasksLength];
+    tasks[0] = new NodeWS(arrayCapacity);
+    head = new int[processors];
+    std::fill(head, head + numThreads, 0);
+    currentNodes++;
+    length = currentNodes * arrayCapacity;
+}
+
+wsncmultla::~wsncmultla() {
+    delete[] head;
+    for (int i = 0; i < currentNodes; i++) delete tasks[i];
+    delete[] tasks;
+}
+
+bool wsncmultla::isEmpty(int label) {
+    return head[label] > tail;
+}
+
+bool wsncmultla::put(int task, int label) {
+    // std::cout << string_format("put: %d, %d", tail, label) << std::endl;
+    (void) label;
+    if (tail == (length - 1)) expand();
+    tail++;
+    if (tail <= (length - 3)) {
+        (*tasks[currentNodes - 1])[(tail + 1) % arrayCapacity] = BOTTOM;
+        (*tasks[currentNodes - 1])[(tail + 2) % arrayCapacity] = BOTTOM;
+    }
+    (*tasks[currentNodes - 1])[tail % arrayCapacity] = task;
+    return true;
+}
+
+int wsncmultla::take(int label) {
+    // std::cout << string_format("take: %d, %d", head, label) << std::endl;
+    head[label] = std::max(head[label], Head.load());
+    int h = head[label];
+    if (h <= tail) {
+        int node = h / arrayCapacity;
+        int position = h % arrayCapacity;
+        int task = (*tasks[node])[position];
+        head[label] = h + 1;
+        Head.store(h + 1);
+        return task;
+    }
+    return EMPTY;
+}
+
+int wsncmultla::steal(int label) {
+    // std::cout << string_format("take: %d, %d", head, label) << std::endl;
+    head[label] = std::max(head[label], Head.load());
+    int h = head[label];
+    if (h <= tail) {
+        int node = h / arrayCapacity;
+        int position = h % arrayCapacity;
+        if (node <= currentNodes) {
+            int task = (*tasks[node])[position];
+            if (task != BOTTOM) {
+                head[label] = h + 1;
+                Head.store(h + 1);
+                return task;
+            }
+        }
+
+    }
+    return EMPTY;
+}
+
+void wsncmultla::expand() {
+    if (currentNodes < (tasksLength - 1)) {
+        tasks[currentNodes++] = new NodeWS(arrayCapacity);
+        length = currentNodes * arrayCapacity;
+    } else {
+        int newLength = tasksLength * 2;
+        NodeWS** newNodes = new NodeWS*[newLength];
+        for(int i = 0; i < tasksLength; i++) newNodes[i] = tasks[i];
+        newNodes[currentNodes++] = new NodeWS(arrayCapacity);
+        NodeWS** tmp = tasks;
+        tasks = newNodes;
+        delete[] tmp;
+        tasksLength = newLength;
+        length = currentNodes * arrayCapacity;
+    }
+}
+
+int wsncmultla::getCapacity() const {
+    return length;
+}

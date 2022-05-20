@@ -60,3 +60,19 @@
      - Memory fences in detail.
      - Applications of work-stealing.
      - Applications of queues.
+
+* Memory used
+
+  Graph of 1,000,000 vertices and 64 threads
+
+  - Vertex :: bool (1 byte), int (4 byte), neighbours_ (24 bytes * number of
+    neighbours), children (24 bytes * number of children), the previous two are
+    at least 24 bytes. In total, at least 32 bytes including padding.
+  - Graph size :: torus2D, each vertex has 4 neighbours, with one million of
+    vertices, it should be 8 bytes of payload plus 24 * 4 = 96 bytes of
+    neighbours plus 24 bytes of pointer to children, in total 128 bytes *
+    1,000,000, at least in total 128 megabytes, never less than that value.
+  - Colors, 1,000,000 * 4 bytes = 4 megabytes
+  - parents 1,000,000 * 4 bytes = 4 megabytes
+  - visited 1,000,000 * 4 bytes = 4 megabytes
+  -

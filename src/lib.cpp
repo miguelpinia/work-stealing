@@ -205,8 +205,8 @@ std::string getAlgorithmTypeFromEnum(AlgorithmType type)
         return "CILK";
     // case AlgorithmType::IDEMPOTENT_DEQUE:
     //     return "IDEMPOTENT_DEQUE";
-    case AlgorithmType::IDEMPOTENT_DEQUE_2:
-        return "IDEMPOTENT_DEQUE_2";
+    // case AlgorithmType::IDEMPOTENT_DEQUE_2:
+    //     return "IDEMPOTENT_DEQUE_2";
     case AlgorithmType::IDEMPOTENT_LIFO:
         return "IDEMPOTENT_LIFO";
     case AlgorithmType::IDEMPOTENT_FIFO:
@@ -216,7 +216,8 @@ std::string getAlgorithmTypeFromEnum(AlgorithmType type)
     case AlgorithmType::B_WS_NC_MULT_OPT:
         return "B_WS_NC_MULT";
     // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
-    // case AlgorithmType::WS_NC_MULT_LA_OPT:
+    case AlgorithmType::WS_NC_MULT_LA_OPT:
+        return "WS_NC_MULT_LA_OPT";
     // case AlgorithmType::SIMPLE:
     default:
         return "UNKNOWN";
@@ -273,6 +274,7 @@ bool isSpecial(AlgorithmType type)
     switch(type) {
     case AlgorithmType::WS_NC_MULT_OPT:
     case AlgorithmType::B_WS_NC_MULT_OPT:
+    case AlgorithmType::WS_NC_MULT_LA_OPT:
         return true;
     default:
         return false;
@@ -288,12 +290,12 @@ json experimentComplete(GraphType type, int shape, bool directed)
     graph g = graphFactory(type, shape, directed);
     for (int i = 0; i < numProcessors; i++) {
         std::cout << string_format("Iteración: %d\n", i);
-        int structSize = calculateStructSize(type, shape);
+        // int structSize = calculateStructSize(type, shape);
         for (int at = AlgorithmType::CHASELEV; at != AlgorithmType::LAST; at++) {
             AlgorithmType atype = static_cast<AlgorithmType>(at);
             bool special = isSpecial(atype);
             ws::Params p{type, shape, false,
-                (i + 1), atype, structSize, 10, StepSpanningTreeType::COUNTER,
+                (i + 1), atype, 8192, 10, StepSpanningTreeType::COUNTER,
                 false, false, false, special};
             json result = experiment(p, g);
             data[atype].emplace_back(result);

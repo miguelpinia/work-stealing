@@ -21,6 +21,20 @@ using json = nlohmann::json;
 
 int suma(int a, int b);
 
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args );
+
+template<typename ... Args>
+std::string string_format( const std::string& format, Args ... args )
+{
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>( size_s );
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
 ///////////////
 // Constants //
 ///////////////
@@ -58,9 +72,9 @@ enum AlgorithmType {
     IDEMPOTENT_FIFO,  // Idempotent work-stealing first-in first-out
     IDEMPOTENT_LIFO,  // Idempotent work-stealing last-in first-out
     // IDEMPOTENT_DEQUE, // Idempotent work-stealing doble queue
-    IDEMPOTENT_DEQUE_2,
+    // IDEMPOTENT_DEQUE_2,
     WS_NC_MULT_OPT,   // Work-stealing with multiplicity optimized ("infinite array")
-    // WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
+    WS_NC_MULT_LA_OPT,// Work-stealing with multiplicity optimized ("linked-lists")
     B_WS_NC_MULT_OPT, // Work-stealing bounded with multiplicity ("infinite array")
     // B_WS_NC_MULT_LA_OPT // Work-stealing bounded with multiplicity ("linked-lists")
     LAST
@@ -441,20 +455,129 @@ public:
     }
 };
 
+// To implement list-of-arrays for work-stealing with multiplicity,
+//     we need to declare an struct of nodes, where each node
+
+// BOTTOM = -2;
+// EMPTY = -1;
+// ws-la {
+
+//  capacity: Length of the array in the node;
+//  nodeCapacity: initial number of nodes;
+//  length: capacity * nodeCapacity tasks to store;
+//  size: number of stored tasks;
+//  processors: number of processors available in the system;
+
+
+//  node {
+//    data[capacity];
+//    node* next;
+//    boolean deleted;
+//    constructor(capacity) : capacity(capacity) {}
+//  }
+
+//  node* tasks[nodeCapacity];
+
+//  atomic<int> Head;
+//  int tail;
+//  int head[processors];
+//  int currentNodes;
+
+//  constructor(size, numThreads, nodeCapacity) {
+//      capacity = size;
+//      processors = numThreads;
+//      Head = 0;
+//      tail = -1;
+//      this.nodeCapacity = nodeCapacity;
+//      tasks[0] = new node(capacity);
+//      currentNodes++;
+//      length = capacity * nodeCapacity;
+//  }
+
+//  bool isEmpty(label) { return head[label] > tail; }
+
+//  bool put(task, label) {
+//      if (tail == (length - 1)) expand();
+//      tail++;
+//      if (tail <= (length - 3)) {
+//          tasks[currentNodes - 1]->data[tail + 1] = BOTTOM;
+//          tasks[currentNodes - 1]->data[tail + 2] = BOTTOM;
+//      }
+//      tasks[currentNodes - 1]->data[tail] = task;
+//      return true;
+//  }
+
+//  int take(label) {
+//      h = Math.max(head[label], Head.load());
+//      if (h <= tail) {
+//          node = h / capacity;
+//          position = h % capacity;
+//          task = tasks[node]->data[position];
+//          head[label] = h + 1;
+//          Head.store(h + 1);
+//          return task;
+//      }
+//      return EMPTY;
+//  }
+
+//  int steal(label) {
+//      h = Math.max(head[label], Head.load());
+//      if (h <= tail) {
+//          node = h / capacity;
+//          position = h % capacity;
+//          task = tasks[node]->data[position];
+//          if (task != BOTTOM) {
+//              head[label] = h + 1;
+//              Head.store(h + 1);
+//              return task;
+//          }
+//      }
+//      return EMPTY;
+//  }
+
+//  void expand() {
+
+//  }
+
+// }
+
+
+
+class NodeWS {
+private:
+    bool deleted = false;
+    int capacity;
+    NodeWS* next;
+    int* array;
+public:
+    explicit NodeWS(int capacity);
+
+    ~NodeWS();
+
+    int& operator[](int i);
+
+    void setNext(NodeWS* next);
+
+    NodeWS* getNext();
+};
+
 class wsncmultla : public workStealingAlgorithm {
 private:
+    int arrayCapacity;
+    int processors;
+    int tasksLength;
     int tail;
-    int size;
     std::atomic<int> Head;
-    std::atomic<int>* head;
-    std::atomic<int>* tasks;
+    int currentNodes = 0;
+    int length;
+    int* head;
+    NodeWS** tasks;
 public:
-    wsncmultla(int size, int numThreads);
+    wsncmultla(int initialSize, int arrayCapacity, int numThreads);
 
-    ~wsncmultla() override {
-        delete[] head;
-        delete[] tasks;
-    }
+    ~wsncmultla() override;
+
+    bool isEmpty(int label);
 
     bool put(int task, int label);
 
@@ -462,9 +585,9 @@ public:
 
     int steal(int label);
 
-    bool isEmpty(int label);
-
     void expand();
+
+    int getCapacity() const;
 
     void printType() {
         std::cout << "WCNC_MULT_LA" << std::endl;
@@ -505,6 +628,7 @@ public:
     }
 
 };
+
 
 class bwsncmultla : public workStealingAlgorithm {
 private:
@@ -616,20 +740,6 @@ public:
 
     virtual void graph_traversal_step() = 0;
 };
-
-template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args );
-
-template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args )
-{
-    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
-    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
-    auto size = static_cast<size_t>( size_s );
-    std::unique_ptr<char[]> buf( new char[ size ] );
-    std::snprintf( buf.get(), size, format.c_str(), args ... );
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
-}
 
 int pickRandomThread(int numThreads, int processor);
 

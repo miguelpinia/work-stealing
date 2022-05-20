@@ -368,17 +368,17 @@ workStealingAlgorithm* workStealingAlgorithmFactory(AlgorithmType algType, int c
         return new idempotentLIFO(capacity);
     // case AlgorithmType::IDEMPOTENT_DEQUE:
     //     return new idempotentDeque(capacity);
-    case AlgorithmType::IDEMPOTENT_DEQUE_2:
-        return new idempotentDeque2(capacity);
+    // case AlgorithmType::IDEMPOTENT_DEQUE_2:
+    //     return new idempotentDeque2(capacity);
     case AlgorithmType::WS_NC_MULT_OPT:
         return new wsncmult(capacity, numThreads);
     case AlgorithmType::B_WS_NC_MULT_OPT:
         return new bwsncmult(capacity, numThreads);
+    case AlgorithmType::WS_NC_MULT_LA_OPT:
+        return new wsncmultla(512, capacity, numThreads);
     case AlgorithmType::LAST:
         break;
         // case AlgorithmType::SIMPLE:
-        //     break;
-        // case AlgorithmType::WS_NC_MULT_LA_OPT:
         //     break;
         // case AlgorithmType::B_WS_NC_MULT_LA_OPT:
         //     break;
